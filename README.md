@@ -1,0 +1,1 @@
+make sure to run `conda install -c salilab dssp` for the mkdssp to run the data processing

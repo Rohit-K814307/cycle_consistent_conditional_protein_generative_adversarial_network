@@ -1,5 +1,16 @@
 PDB ID LIST:
-
+_____________________________________________
+The DSSP codes for secondary structure used here are:
+        # =====     ====
+        # Code      Structure
+        # =====     ====
+        # H         Alpha helix (4-12)
+        # B         Isolated beta-bridge residue
+        # E         Strand
+        # G         3-10 helix
+        # I         Pi helix
+        # T         Turn
+        # S         Bend
 _____________________________________________
 
 1ET1,1GQV,1KTH,1L9L,1LUG,1PWM,1R6J,
