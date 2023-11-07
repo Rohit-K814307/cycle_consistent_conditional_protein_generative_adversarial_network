@@ -1,33 +1,126 @@
+import os
+
 from Bio.PDB import PDBParser
 from Bio.PDB.DSSP import DSSP
 
-def extract_c8_dssp(pdb_file_path):
-    # Create a PDB parser
-    parser = PDBParser(QUIET=True)
+from Bio.SCOP import *
+from polarity_list import polarity_list
 
-    # Load the PDB file and get the structure
-    structure = parser.get_structure('protein', pdb_file_path)
+def extract_secondary_structure(fnames, fpaths):
 
-    # Initialize a dictionary to store C8 DSSP assignments
-    c8_dssp = {}
+    structures = {}
 
-    for model in structure:
-        for chain in model:
-            dssp = DSSP(chain, pdb_file_path, dssp='mkdssp')
+    #secondary structure (c8 OR c3 dssp) - we can use either doesnt really matter just collect both for now
+    for idx in range(len(fnames)):
+        fname = fnames[idx]
+        fpath = fpaths[idx]
 
-            for key, ss in dssp.property_dict.items():
-                c8_ss = 'C'  # Default is coil (C)
+        p = PDBParser(QUIET=True)
+        structure = p.get_structure(fname, fpath)
+        model = structure[0]
+        dssp = DSSP(model, fpath)
 
-                if ss == 'H':
-                    c8_ss = 'H'  # Helix
-                elif ss == 'E':
-                    c8_ss = 'E'  # Strand
+        # extract sequence and secondary structure from the DSSP tuple
+        sequence = ''
+        sec_structure = ''
+        for z in range(len(dssp)):
+            a_key = list(dssp.keys())[z]
+            sequence += dssp[a_key][1]
+            sec_structure += dssp[a_key][2]
 
-                c8_dssp[key] = c8_ss
+        #
+        # The DSSP codes for secondary structure used here are:
+        # =====     ====
+        # Code      Structure
+        # =====     ====
+        # H         Alpha helix (4-12)
+        # B         Isolated beta-bridge residue
+        # E         Strand
+        # G         3-10 helix
+        # I         Pi helix
+        # T         Turn
+        # S         Bend
+        # ~         None
+        # =====     ====
+        #
+        
+        sec_structure = sec_structure.replace('-', '~')
+        sec_structure_3state=sec_structure
 
-    return c8_dssp
+        # if desired, convert DSSP's 8-state assignments into 3-state [C - coil, E - extended (beta-strand), H - helix]
+        sec_structure_3state = sec_structure_3state.replace('H', 'H') #0
+        sec_structure_3state = sec_structure_3state.replace('E', 'E')
+        sec_structure_3state = sec_structure_3state.replace('T', '~')
+        sec_structure_3state = sec_structure_3state.replace('~', '~')
+        sec_structure_3state = sec_structure_3state.replace('B', 'E')
+        sec_structure_3state = sec_structure_3state.replace('G', 'H') #5
+        sec_structure_3state = sec_structure_3state.replace('I', 'H') #6
+        sec_structure_3state = sec_structure_3state.replace('S', '~')
 
-# Example usage:
-pdb_file_path = '../data/batch_1_data/1et1.pdb'
-c8_dssp = extract_c8_dssp(pdb_file_path)
-print("C8 DSSP Secondary Structure:", c8_dssp)
+
+        structures[fname] = {"sequence":sequence, "c8":sec_structure, "c3":sec_structure_3state}
+
+    return structures
+
+
+def find_seq_polarity(sequence):
+    new_seq = ""
+    po = polarity_list()
+
+    for s in sequence:
+        if s in po.keys():
+            new_seq += str(po.get(s).get("polarity_type"))
+        else:
+            new_seq += "~"
+
+    return new_seq
+
+
+def extract_primary_polarity(fnames, fpaths):
+
+    polarities = {}
+
+    for idx in range(len(fnames)):
+        fname = fnames[idx]
+        fpath = fpaths[idx]
+
+        p = PDBParser(QUIET=True)
+        structure = p.get_structure(fname, fpath)
+        model = structure[0]
+        dssp = DSSP(model, fpath)
+
+        # extract sequence from DSSP tuple
+        sequence = ''
+        for z in range(len(dssp)):
+            a_key = list(dssp.keys())[z]
+            sequence += dssp[a_key][1]
+        
+        #find polarity seq from AA seq
+        polarity_conv = find_seq_polarity(sequence)
+
+        polarities[fname] = {"sequence":sequence, "polarity_conv":polarity_conv}
+
+    return polarities
+
+
+def extract_structures(dir_path):
+
+    structures = {}
+
+    #get file name and full path
+    fnames = []
+    fpaths = []
+    for file in os.listdir(dir_path):
+        if ".pdb" in file:
+            fnames.append(file.split(".")[0])
+            fpaths.append(os.path.join(dir_path, file))
+
+    # secondary_structure = extract_secondary_structure(fnames, fpaths)
+    # structures["secondary"] = secondary_structure
+    
+    polarity = extract_primary_polarity(fnames, fpaths)
+    structures["primary_pol"] = polarity
+
+    return structures
+    
+#extract_structures("../data/batch_1_data")
