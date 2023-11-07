@@ -3,7 +3,6 @@ import os
 from Bio.PDB import PDBParser
 from Bio.PDB.DSSP import DSSP
 
-from Bio.SCOP import *
 from polarity_list import polarity_list
 
 def extract_secondary_structure(fnames, fpaths):
