@@ -94,14 +94,16 @@ def add_backbone_edges(G: nx.Graph) -> nx.Graph:
     return G
 
 
-def viz(id, fdir, show=True, save=False, saveDir=None):
+def viz_file(id, fdir, show=True, save=False, saveDir=None):
     path = ""
+    id = id.lower()
     for f in os.listdir(fdir):
-        if id in f:
+        if id in f and ".pdb" in f:
             path = os.path.join(fdir, f)
         else:
             print("id not found")
-            
+    
+    print(path)
 
     df, df_header = read_pdb_to_dataframe(path)
     process_df = process_dataframe(df)
@@ -129,3 +131,6 @@ def viz(id, fdir, show=True, save=False, saveDir=None):
 
     if save:
         p.write_image(saveDir)
+
+#EXAMPLE DO NOT RUN
+#viz_file("1GQV","../data/batch_1_data",True,False)
