@@ -94,7 +94,7 @@ def add_backbone_edges(G: nx.Graph) -> nx.Graph:
     return G
 
 
-def viz_file(id, fdir, show=True, save=False, saveDir=None):
+def viz_file(id, fdir, show=True, save_path=None):
     path = ""
     id = id.lower()
     for f in os.listdir(fdir):
@@ -129,8 +129,12 @@ def viz_file(id, fdir, show=True, save=False, saveDir=None):
         p.show()
 
 
-    if save:
-        p.write_image(saveDir)
+    if save_path is not None:
+        p.write_image(save_path)
 
-#EXAMPLE DO NOT RUN
 #viz_file("1GQV","../data/batch_1_data",True,False)
+
+
+if __name__ == "__main__":
+    import sys
+    viz_file(sys.argv[1], sys.argv[2], True, sys.argv[3])
