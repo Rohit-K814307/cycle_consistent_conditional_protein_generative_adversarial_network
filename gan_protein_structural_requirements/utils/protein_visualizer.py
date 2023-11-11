@@ -94,11 +94,14 @@ def add_backbone_edges(G: nx.Graph) -> nx.Graph:
     return G
 
 
-def viz(id, fpath):
+def viz(id, fdir, show=True, save=False, saveDir=None):
     path = ""
-    for f in os.listdir(fpath):
+    for f in os.listdir(fdir):
         if id in f:
-            path = os.path.join(fpath, f)
+            path = os.path.join(fdir, f)
+        else:
+            print("id not found")
+            
 
     df, df_header = read_pdb_to_dataframe(path)
     process_df = process_dataframe(df)
@@ -119,4 +122,10 @@ def viz(id, fpath):
     plot_title=f"{id} Backbone Protein Graph",
     node_size_multiplier=1,
     )
-    p.show()
+
+    if show:
+        p.show()
+
+
+    if save:
+        p.write_image(saveDir)
