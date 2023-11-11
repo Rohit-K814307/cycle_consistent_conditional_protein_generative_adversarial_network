@@ -1,9 +1,5 @@
 <!-- PROJECT SHIELDS -->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][https://github.com/Rohit-K814307/gan_protein_structural_requirements/forks]
-[![Issues][issues-shield]][https://github.com/Rohit-K814307/gan_protein_structural_requirements/issues]
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][https://www.linkedin.com/in/rohit-kulkarni-305a86202/]
+[![Contributors][contributors-shield]][contributors-url] [![Forks][forks-shield]][https://github.com/Rohit-K814307/gan_protein_structural_requirements/forks] [![Issues][issues-shield]][https://github.com/Rohit-K814307/gan_protein_structural_requirements/issues] [![MIT License][license-shield]][license-url] [![LinkedIn][linkedin-shield]][https://www.linkedin.com/in/rohit-kulkarni-305a86202/]
 
 
 <!-- PROJECT LOGO -->
