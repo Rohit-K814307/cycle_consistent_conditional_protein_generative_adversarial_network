@@ -2,7 +2,6 @@ import os
 
 from Bio.PDB import PDBParser
 from Bio.PDB.DSSP import DSSP
-
 from polarity_list import polarity_list
 
 def extract_secondary_structure(fnames, fpaths):
@@ -102,6 +101,7 @@ def extract_primary_polarity(fnames, fpaths):
     return polarities
 
 
+        
 def extract_structures(dir_path):
 
     structures = {}
@@ -114,12 +114,13 @@ def extract_structures(dir_path):
             fnames.append(file.split(".")[0])
             fpaths.append(os.path.join(dir_path, file))
 
-    # secondary_structure = extract_secondary_structure(fnames, fpaths)
-    # structures["secondary"] = secondary_structure
+    secondary_structure = extract_secondary_structure(fnames, fpaths)
+    structures["secondary"] = secondary_structure
     
     polarity = extract_primary_polarity(fnames, fpaths)
     structures["primary_pol"] = polarity
 
+
     return structures
     
-#extract_structures("../data/batch_1_data")
+# extract_structures("../data/batch_1_data")
