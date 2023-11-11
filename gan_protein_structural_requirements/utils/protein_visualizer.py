@@ -132,8 +132,6 @@ def viz_file(id, fdir, show=True, save_path=None):
     if save_path is not None:
         p.write_image(save_path)
 
-#viz_file("1GQV","../data/batch_1_data",True,False)
-
 
 if __name__ == "__main__":
     import sys

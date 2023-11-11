@@ -2,9 +2,15 @@ import os
 
 from Bio.PDB import PDBParser
 from Bio.PDB.DSSP import DSSP
-from polarity_list import polarity_list
+from utils.polarity_list import polarity_list
 
 def extract_secondary_structure(fnames, fpaths):
+    """
+    Arguments:
+    
+        fnames (list): Names of files in the dir
+        fpaths (list): Paths of files corresponding to fnames
+    """
 
     structures = {}
 
@@ -75,6 +81,12 @@ def find_seq_polarity(sequence):
 
 
 def extract_primary_polarity(fnames, fpaths):
+    """
+    Arguments:
+    
+        fnames (list): Names of files in the dir
+        fpaths (list): Paths of files corresponding to fnames
+    """
 
     polarities = {}
 
@@ -103,6 +115,11 @@ def extract_primary_polarity(fnames, fpaths):
 
         
 def extract_structures(dir_path):
+    """
+    Arguments:
+    
+        dir_path (string): Root path of PDB files
+    """
 
     structures = {}
 
@@ -123,4 +140,4 @@ def extract_structures(dir_path):
 
     return structures
     
-# extract_structures("../data/batch_1_data")
+# extract_structures("../data/raw/batch_1_data")
