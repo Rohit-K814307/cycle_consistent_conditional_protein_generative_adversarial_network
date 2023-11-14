@@ -140,6 +140,18 @@ def dssp_pdb(pdb_batch):
             tmp.close()  # deletes the file
     return out
 
+def polarity_content_batch(batch_seq):
+    """
+    Arguments:
+    
+        batch_seq (list): list of sequences/primary structure
+    """
+
+    polarities = []
+    for sequence in batch_seq:
+        polarity_conv = find_seq_polarity(sequence)
+        polarities.append(polarity_conv)
+
 def dssp_content_object_batch(batch_dssp):
     """
     Arguments:
@@ -217,11 +229,19 @@ def extract_structures(dir_path):
 
     return structures
     
+
+#############test examples########################
 # from utils.folding_models import esm_batch_predict, load_esm
 # model, tokenizer = load_esm(verbose=False)
 # print("model loaded \n\n\n\n\n\n\n\n")
-# batch = ["GVGVGVGVGVGVGVGVGVVVG", "VVVGVGVGGGGVG", "GVVVVGVGVGVGV"]
+# test_protein = "MGAGASAEEKHSRELEKKLKEDAEKDARTVKLLLLGAGESGKSTIVKQMKIIHQDGYSLEECLEFIAIIYGNTLQSILAIVRAMTTLNIQYGDSARQDDARKLMHMADTIEEGTMPKEMSDIIQRLWKDSGIQACFERASEYQLNDSAGYYLSDLERLVTPGYVPTEQDVLRSRVKTTGIIETQFSFKDLNFRMFDVGGQRSERKKWIHCFEGVTCIIFIAALSAYDMVLVEDDEVNRMHESLHLFNSICNHRYFATTSIVLFLNKKDVFFEKIKKAHLSICFPDYDGPNTYEDAGNYIKVQFLELNMRRDVKEIYSHMTCATDTQNVKFVFDAVTDIIIKENLKDCGLF"
+# batch = [test_protein]
 # outs = esm_batch_predict(batch, model, tokenizer)
 # print("prediction complete \n\n\n\n\n\n\n\n\n")
 # out_dssp = dssp_pdb(outs)
 # dssp_content_batch = dssp_content_object_batch(out_dssp)
+# print(dssp_content_batch)
+# """
+# outputs:
+# [('~~~~~~HHHHHHHHHHHHHHHHHHHHHTEEEEEEE~STTSSHHHHHHHHHHHHS~S~~HHHHHHHHHHHHHHHHHHHHHHHHHHHHTT~~~SSTTHHHHHHHHHHHHTT~~TT~~~HHHHHHHHHHHTSHHHHHHHTTGGGS~~~TTHHHHHHTHHHHTSTT~~~~HHHHHH~~~~~~SEEEEEEEETTEEEEEEEE~~STTTGGGGGGG~TT~SEEEEEEEGGGTT~B~SS~TTSBHHHHHHHHHHHHHT~GGGSSSEEEEEEE~HHHHHHHTTTS~GGGT~TT~~S~SSHHHHHHHHHHHHHHT~TTTTT~~EEEEE~~TT~HHHHHHHHHHHHHHHHHHHHHHTT~~', '~~~~~~HHHHHHHHHHHHHHHHHHHHH~EEEEEEE~~~~~~HHHHHHHHHHHH~~~~~HHHHHHHHHHHHHHHHHHHHHHHHHHHH~~~~~~~~~HHHHHHHHHHHH~~~~~~~~~HHHHHHHHHHH~~HHHHHHH~~HHH~~~~~~HHHHHH~HHHH~~~~~~~~HHHHHH~~~~~~~EEEEEEEE~~EEEEEEEE~~~~~~HHHHHHH~~~~~EEEEEEEHHH~~~E~~~~~~~EHHHHHHHHHHHHH~~HHH~~~EEEEEEE~HHHHHHH~~~~~HHH~~~~~~~~~~HHHHHHHHHHHHHH~~~~~~~~~EEEEE~~~~~HHHHHHHHHHHHHHHHHHHHHH~~~~')]
+# """
