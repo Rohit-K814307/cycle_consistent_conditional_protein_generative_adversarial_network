@@ -126,11 +126,6 @@ def dssp_pdb(pdb_batch):
     for i in range(len(pdb_batch)):
         tmp = tempfile.NamedTemporaryFile(delete=True, suffix=".pdb")
         try:
-
-            #TODO:fix the encoding so it opens the file 
-            # and writes to it with proper encoding rather
-            #  than doing this (if possible)
-
             tmp.write("".join(pdb_batch[i][1]).encode('utf-8'))
             structure = p.get_structure(f"Protein_{i}",tmp.name)
             model = structure[0]
@@ -151,7 +146,7 @@ def polarity_content_batch(batch_seq):
     for sequence in batch_seq:
         polarity_conv = find_seq_polarity(sequence)
         polarities.append(polarity_conv)
-        
+
     return polarities
 
 def dssp_content_object_batch(batch_dssp):
@@ -231,6 +226,20 @@ def extract_structures(dir_path):
 
     return structures
     
+
+def tokenize_seq(seq):
+    return
+
+def untokenize_seq(tokens):
+    return
+
+def convert_dssp_string(dssp):
+    return
+
+def convert_pol_string(pol):
+    return
+
+
 
 #############test examples########################
 # from utils.folding_models import esm_batch_predict, load_esm
