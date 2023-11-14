@@ -4,4 +4,4 @@ __pycache__/
 
 
 gan_protein_structural_requirements/data/batch_1_data/
-gan_protein_structural_requirements/utils/esmfold_v1/
+gan_protein_structural_requirements/utils/esmfoldv1/

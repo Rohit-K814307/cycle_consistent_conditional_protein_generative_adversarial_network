@@ -26,8 +26,8 @@ def convert_outputs_to_pdb(outputs):
     return pdbs
 
 def load_esm(verbose=True):
-    tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path = "./esmfold_v1")
-    model = EsmForProteinFolding.from_pretrained("./esmfold_v1", low_cpu_mem_usage=True)
+    tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path = "/Users/rohitkulkarni/Documents/gan_protein_structural_requirements/gan_protein_structural_requirements/utils/esmfoldv1")
+    model = EsmForProteinFolding.from_pretrained("/Users/rohitkulkarni/Documents/gan_protein_structural_requirements/gan_protein_structural_requirements/utils/esmfoldv1", low_cpu_mem_usage=True)
     model.trunk.set_chunk_size(64)
 
     if verbose:
@@ -43,3 +43,15 @@ def esm_predict(seq, model, tokenizer):
     pdb = convert_outputs_to_pdb(output)
 
     return output, pdb
+
+def esm_batch_predict(seqs, model, tokenizer):
+    preds = []
+    for seq in seqs:
+        tokenized_input = tokenizer([seq], return_tensors="pt", add_special_tokens=False)['input_ids']
+        with torch.no_grad():
+            output = model(tokenized_input)
+
+        pdb = convert_outputs_to_pdb(output)
+        preds.append((output, pdb))
+
+    return preds
