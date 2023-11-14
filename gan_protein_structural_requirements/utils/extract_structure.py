@@ -151,6 +151,8 @@ def polarity_content_batch(batch_seq):
     for sequence in batch_seq:
         polarity_conv = find_seq_polarity(sequence)
         polarities.append(polarity_conv)
+        
+    return polarities
 
 def dssp_content_object_batch(batch_dssp):
     """
