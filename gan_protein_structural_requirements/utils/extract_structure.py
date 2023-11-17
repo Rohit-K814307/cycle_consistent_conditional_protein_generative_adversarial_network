@@ -226,14 +226,39 @@ def extract_structures(dir_path):
 
     return structures
     
+def vocab_list():
+    vocab = []
+    for nam in polarity_list.keys():
+        vocab.append(nam)
+    return vocab
 
-def tokenize_seq(seq):
+def tokenize_seq(seq, vocab=vocab_list()):
     return
 
-def untokenize_seq(tokens):
+def untokenize_seq(tokens, vocab=vocab_list()):
     return
 
 def convert_dssp_string(dssp):
+    """
+    Arguments:
+        dssp (string): string of dssp content (c8)
+    
+    Returns:
+        dssp percentage composition (list): respective indices and content characteristics:
+            0 - alpha helix
+            1 - isolated beta-bridge residue
+            2 - strand
+            3 - 3-10 helix
+            4 - pi helix
+            5 - turn
+            6 - bend
+            7 - none
+    """
+    values = ["H","B","E","G","I","T","S","~"]
+
+
+
+
     return
 
 def convert_pol_string(pol):

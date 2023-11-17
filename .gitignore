@@ -1,7 +1,4 @@
-__pycache__/
-
-.DS_Store*
-
-
-gan_protein_structural_requirements/data/batch_1_data/
+**/__pycache__/
+.DS_Store
+gan_protein_structural_requirements/data/raw/batch_1_data/
 gan_protein_structural_requirements/utils/esmfoldv1/
