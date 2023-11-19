@@ -88,15 +88,9 @@ Here's a blank template to get started: To avoid retyping too much info. Do a se
 - please run the following commands in shell from the root directory
 
 ```
-chmod +x ./gan_protein_structural_requirements/scripts/data_download.sh
-chmod +x ./gan_protein_structural_requirements/scripts/esm_download.sh
-chmod +x ./gan_protein_structural_requirements/scripts/uncompress.sh
+chmod +x ./gan_protein_structural_requirements/scripts/setup_script.sh
 
-./gan_protein_structural_requirements/scripts/esm_download.sh
-
-./gan_protein_structural_requirements/scripts/data_download.sh -f ./gan_protein_structural_requirements/scripts/list_file.txt -o ./gan_protein_structural_requirements/data/raw/batch_2_data -p
-
-./gan_protein_structural_requirements/scripts/uncompress.sh
+./gan_protein_structural_requirements/scripts/setup_script.sh
 ```
 
 ### Prerequisites
