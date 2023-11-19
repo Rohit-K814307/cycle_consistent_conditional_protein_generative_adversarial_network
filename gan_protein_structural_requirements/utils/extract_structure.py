@@ -232,11 +232,25 @@ def vocab_list():
         vocab.append(nam)
     return vocab
 
-def tokenize_seq(seq, vocab=vocab_list()):
-    return True
+def get_untokenizer(path):
+    path_to_vocab = path
 
-def untokenize_seq(tokens, vocab=vocab_list()):
-    return True
+    with open(path_to_vocab, 'r') as file:
+        lines = file.readlines()
+    
+    result_dict = {i: value.strip() for i, value in enumerate(lines)}
+    result_dict = {key: value for key, value in result_dict.items()}
+
+    return result_dict
+
+def untokenize(untokenizer, batch):
+    result = []
+    for token_seq in batch:
+        result_i = ""
+        for token_num in token_seq:
+            result_i += untokenizer.get(token_num.item())
+        result.append(result_i)
+    return result
 
 def convert_dssp_string(dssp):
     """

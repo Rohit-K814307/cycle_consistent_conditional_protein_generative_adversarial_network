@@ -25,6 +25,10 @@ def convert_outputs_to_pdb(outputs):
         pdbs.append(to_pdb(pred))
     return pdbs
 
+
+def load_tokenizer():
+    return AutoTokenizer.from_pretrained(pretrained_model_name_or_path = "/Users/rohitkulkarni/Documents/gan_protein_structural_requirements/gan_protein_structural_requirements/utils/esmfoldv1")
+
 def load_esm(verbose=True):
     tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path = "/Users/rohitkulkarni/Documents/gan_protein_structural_requirements/gan_protein_structural_requirements/utils/esmfoldv1")
     model = EsmForProteinFolding.from_pretrained("/Users/rohitkulkarni/Documents/gan_protein_structural_requirements/gan_protein_structural_requirements/utils/esmfoldv1", low_cpu_mem_usage=True)
