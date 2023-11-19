@@ -9,6 +9,7 @@ import networkx as nx
 from prody import parsePDBHeader
 from typing import Optional
 import os
+import py3Dmol
 
 def read_pdb_to_dataframe(pdb_path: Optional[str] = None, model_index: int = 1, parse_header: bool = True, ) -> pd.DataFrame:
     """
@@ -131,6 +132,37 @@ def viz_file(id, fdir, show=True, save_path=None):
 
     if save_path is not None:
         p.write_image(save_path)
+
+
+"""
+Below functions ONLY WORK IN IPYNB JUPYTER NOTEBOOKS
+"""
+
+def jupy_viz_file(fpath):
+    with open(fpath) as ifile:
+        system = "".join([x for x in ifile])
+
+    view = py3Dmol.view(width=400, height=300)
+    view.addModelsAsFrames(system)
+    view.setStyle({'model': -1}, {"cartoon": {'color': 'spectrum'}})
+    view.zoomTo()
+    view.show()
+
+
+def jupy_viz_obj(pdb):
+    """
+    Arguments:
+    
+        pdb (dictionary): dictionary pdb output of esmfold
+    """
+
+    view = py3Dmol.view(js='https://3dmol.org/build/3Dmol.js', width=800, height=400)
+    view.addModel("".join(pdb), 'pdb')
+    view.setStyle({'model': -1}, {"cartoon": {'color': 'spectrum'}})
+
+
+
+
 
 
 if __name__ == "__main__":

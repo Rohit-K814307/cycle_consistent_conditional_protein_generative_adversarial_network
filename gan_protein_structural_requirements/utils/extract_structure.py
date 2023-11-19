@@ -2,7 +2,7 @@ import os
 
 from Bio.PDB import PDBParser
 from Bio.PDB.DSSP import DSSP
-from utils.polarity_list import polarity_list
+from .polarity_list import polarity_list
 
 import tempfile
 
@@ -228,15 +228,15 @@ def extract_structures(dir_path):
     
 def vocab_list():
     vocab = []
-    for nam in polarity_list.keys():
+    for nam in polarity_list().keys():
         vocab.append(nam)
     return vocab
 
 def tokenize_seq(seq, vocab=vocab_list()):
-    return
+    return True
 
 def untokenize_seq(tokens, vocab=vocab_list()):
-    return
+    return True
 
 def convert_dssp_string(dssp):
     """
@@ -255,14 +255,23 @@ def convert_dssp_string(dssp):
             7 - none
     """
     values = ["H","B","E","G","I","T","S","~"]
+    content = []
 
+    for val in values:
+        content.append(dssp.count(val)/len(dssp))
 
-
-
-    return
+    return content
 
 def convert_pol_string(pol):
-    return
+    percent_polarity = 0
+
+    for val in pol:
+        if val > 0:
+            percent_polarity += 1
+
+    percent_polarity /= len(pol)
+
+    return percent_polarity
 
 
 
