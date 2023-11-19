@@ -14,3 +14,5 @@ mkdir -p $PWD/gan_protein_structural_requirements/data/raw/batch_1_data
 ./gan_protein_structural_requirements/scripts/data_download.sh -f ./gan_protein_structural_requirements/scripts/list_file.txt -o ./gan_protein_structural_requirements/data/raw/batch_1_data -p
 #uncompress the data
 ./gan_protein_structural_requirements/scripts/uncompress.sh
+
+echo "Repo Setup Complete"
