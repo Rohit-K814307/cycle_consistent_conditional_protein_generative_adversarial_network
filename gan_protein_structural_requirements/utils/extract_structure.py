@@ -77,7 +77,7 @@ def find_seq_polarity(sequence):
         if s in po.keys():
             new_seq += str(po.get(s).get("polarity_type"))
         else:
-            new_seq += "~"
+            new_seq += "0"
 
     return new_seq
 
@@ -280,7 +280,7 @@ def convert_pol_string(pol):
     percent_polarity = 0
 
     for val in pol:
-        if val > 0:
+        if int(val) > 0:
             percent_polarity += 1
 
     percent_polarity /= len(pol)
