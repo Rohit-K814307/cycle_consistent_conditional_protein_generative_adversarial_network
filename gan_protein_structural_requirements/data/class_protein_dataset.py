@@ -43,7 +43,7 @@ class Protein_dataset(Dataset):
             label = content_sec["sequence"]
             tokenizer = fold.load_tokenizer(self.path_to_esm)
             tokenized_label = tokenizer([label], return_tensors="pt", add_special_tokens=False)['input_ids']
-            labels.append(tokenized_label)
+            labels.append(tokenized_label[0])
 
         return features, labels
 
