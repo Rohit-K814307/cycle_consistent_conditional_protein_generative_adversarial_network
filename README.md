@@ -99,11 +99,8 @@ run the following commands separately for basic installation of prereqs
 
 - conda is required, see [this link](https://www.anaconda.com) for more information of installation for your system
 
-Please run the following commands
-
-`conda install -c salilab dssp`
-
-please also install [the esm huggingface repo](https://huggingface.co/facebook/esmfold_v1/tree/main) and put in the directory `gan_protein_structural_requirements/utils/esmfold_v1/`
+Please run the following commands:
+- `conda install -c salilab dssp`
 
 once installed, please run `pip install -r requirements.txt`
 
