@@ -1,7 +1,5 @@
 #!/bin/bash
-
-wget -O gan_protein_structural_requirements/data/raw/uniprot_id_data.tsv "https://rest.uniprot.org/uniprotkb/search?fields=accession%2Clength%2Cid&format=tsv&query=%28%28database%3ADrugBank%29%29+AND+%28reviewed%3Atrue%29+AND+%28proteins_with%3A1%29+AND+%28annotation_score%3A5%29+AND+%28length%3A%5B201+TO+400%5D%29&size=500&sort=accession+asc"
-
+wget -O gan_protein_structural_requirements/data/raw/uniprot_id_data.tsv "https://rest.uniprot.org/uniprotkb/search?fields=accession%2Clength%2Cid&format=tsv&query=%28%28database%3ADrugBank%29+AND+%28reviewed%3Atrue%29%29+AND+%28model_organism%3A9606%29+AND+%28proteins_with%3A1%29+AND+%28annotation_score%3A5%29+AND+%28length%3A%5B401+TO+600%5D%29&size=500"
 
 touch gan_protein_structural_requirements/data/raw/train_ids.txt
 touch gan_protein_structural_requirements/data/raw/test_ids.txt
