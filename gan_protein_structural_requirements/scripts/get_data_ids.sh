@@ -1,5 +1,5 @@
 #!/bin/bash
-wget -O gan_protein_structural_requirements/data/raw/uniprot_id_data.tsv "https://rest.uniprot.org/uniprotkb/search?fields=accession%2Clength%2Cid&format=tsv&query=%28%28database%3ADrugBank%29+AND+%28reviewed%3Atrue%29%29+AND+%28model_organism%3A9606%29+AND+%28proteins_with%3A1%29+AND+%28annotation_score%3A5%29+AND+%28length%3A%5B401+TO+600%5D%29&size=500"
+wget -O gan_protein_structural_requirements/data/raw/uniprot_id_data.tsv "https://rest.uniprot.org/uniprotkb/search?fields=accession%2Clength%2Cid&format=tsv&query=%28%28database%3ADrugBank%29+AND+%28reviewed%3Atrue%29%29+AND+%28model_organism%3A9606%29+AND+%28proteins_with%3A1%29+AND+%28annotation_score%3A5%29+AND+%28length%3A%5B1+TO+200%5D%29&size=500"
 
 touch gan_protein_structural_requirements/data/raw/train_ids.txt
 touch gan_protein_structural_requirements/data/raw/test_ids.txt
@@ -33,9 +33,19 @@ read -p "Pause Time 1 second" -t 1
 
 json_data="$(curl -s "https://rest.uniprot.org/idmapping/stream/$jobId")"
 
+from_values=()
+
+# Extract values of "to" key and concatenate into a comma-separated string, skipping repeats
 result=""
-for to_value in $(echo "$json_data" | jq -r '.results[] | .to'); do
-     result="${result}${to_value},"
+for entry in $(echo "$json_data" | jq -c '.results[]'); do
+     from_value=$(echo "$entry" | jq -r '.from')
+     to_value=$(echo "$entry" | jq -r '.to')
+
+     if [[ ! " ${from_values[@]} " =~ " $from_value " ]]; then
+          result="${result}${to_value},"
+          # Add this "from" value to the array
+          from_values+=("$from_value")
+     fi
 done
 
 result="${result%,}"
@@ -58,9 +68,19 @@ read -p "Pause Time 1 second" -t 1
 
 json_data="$(curl -s "https://rest.uniprot.org/idmapping/stream/$jobId")"
 
+from_values=()
+
+# Extract values of "to" key and concatenate into a comma-separated string, skipping repeats
 result=""
-for to_value in $(echo "$json_data" | jq -r '.results[] | .to'); do
-     result="${result}${to_value},"
+for entry in $(echo "$json_data" | jq -c '.results[]'); do
+     from_value=$(echo "$entry" | jq -r '.from')
+     to_value=$(echo "$entry" | jq -r '.to')
+
+     if [[ ! " ${from_values[@]} " =~ " $from_value " ]]; then
+          result="${result}${to_value},"
+          # Add this "from" value to the array
+          from_values+=("$from_value")
+     fi
 done
 
 result="${result%,}"
