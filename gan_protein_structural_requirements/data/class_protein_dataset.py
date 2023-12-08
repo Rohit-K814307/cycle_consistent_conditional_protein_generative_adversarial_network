@@ -21,8 +21,6 @@ class Protein_dataset(Dataset):
         self.X = features
         self.Y = labels
 
-        print(self.X, self.Y)
-
     def __len__(self):
         return len(self.X)
     
