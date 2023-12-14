@@ -15,11 +15,11 @@ class Protein_dataset(Dataset):
             root_dir (string): Directory containing PDB files
         """
         self.root_dir = root_dir
-        #"/Users/rohitkulkarni/Documents/gan_protein_structural_requirements/gan_protein_structural_requirements/utils/esmfoldv1"
         self.path_to_esm = path_to_esm
         features, labels = self.aggregate_data()
         self.X = features
         self.Y = labels
+        self.upsample()
 
     def __len__(self):
         return len(self.X)
@@ -44,4 +44,19 @@ class Protein_dataset(Dataset):
             labels.append(tokenized_label[0])
 
         return features, labels
+    
+    def upsample(self):
+
+        y = []
+        x = []
+        #upsample from classes that are not as even
+        sorted_list = sorted(self.X, key=lambda x: max(x[1:8]), reverse=True)
+        x += sorted_list[:50]
+
+        for entry in x:
+            y.append(self.Y[self.X.index(entry)])
+
+        self.X.extend(x)
+        self.Y.extend(y)
+        
 
