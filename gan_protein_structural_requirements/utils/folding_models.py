@@ -2,6 +2,8 @@ import torch
 from transformers import AutoTokenizer, EsmForProteinFolding
 from transformers.models.esm.openfold_utils.protein import to_pdb, Protein as OFProtein
 from transformers.models.esm.openfold_utils.feats import atom14_to_atom37
+import os
+import numpy as np
 
 def convert_outputs_to_pdb(outputs):
     final_atom_positions = atom14_to_atom37(outputs["positions"][-1], outputs)
@@ -59,3 +61,15 @@ def esm_batch_predict(seqs, model, tokenizer):
         preds.append((output, pdb))
 
     return preds
+
+def get_vocab_encodings():
+    path = os.getcwd() + "/gan_protein_structural_requirements/utils/esmfoldv1/vocab.txt"
+    arr = []
+
+    with open(path,'r') as file:
+        for _ in range(21):
+            line = file.readline().strip()
+            arr.append(line[0])
+
+    arr
+    return arr

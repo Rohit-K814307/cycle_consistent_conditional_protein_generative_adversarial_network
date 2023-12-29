@@ -6,6 +6,7 @@ from ..utils import folding_models as fold
 import numpy as np
 import matplotlib.pyplot as plt
 from torchvision import transforms, utils
+from sklearn.preprocessing import OneHotEncoder
 
 class Protein_dataset(Dataset):
 
@@ -20,8 +21,12 @@ class Protein_dataset(Dataset):
         self.path_to_esm = path_to_esm
         features, labels = self.aggregate_data()
         inps, outs = self.upsample(features, labels)
-        self.X = torch.FloatTensor(inps)
-        self.Y = torch.stack(outs)
+
+        #shape = (batch_size, number of design objectives)
+        self.X = torch.FloatTensor(inps).unsqueeze(1).repeat(1,self.max_prot_len,1)
+
+        #shape = (batch_size, sequence max length, number of amino acids)
+        self.Y, self.encode_cats, self.decode_cats = self.onehot_encode(outs)
         
 
     def __len__(self):
@@ -32,17 +37,33 @@ class Protein_dataset(Dataset):
 
     def pad_label(self, sequence, maxlen):
         for _ in range(maxlen - len(sequence)):
-            sequence += "<pad>"
+            sequence.append([0] * len(sequence[0]))
 
         return sequence
 
+    def onehot_encode(self, labels):
+        categories = fold.get_vocab_encodings()
+        cat_dict = {categories[i] : i for i in range(len(categories))}
+        decode_dict = dict(enumerate(categories))
+        encoded_data = []
 
+        for example in labels:
+            datapoint = []
 
+            for value in example:
+                encoded_val = [0] * int(len(cat_dict.keys()))
+                encoded_val[cat_dict.get(value)] = 1
+                datapoint.append(encoded_val)
+
+            datapoint = self.pad_label(datapoint, self.max_prot_len)
+            encoded_data.append(datapoint)
+        return torch.tensor(encoded_data), cat_dict, decode_dict
 
     def aggregate_data(self):
         structures = struct.extract_structures(self.root_dir)
         features = []
         labels = []
+
         for id in structures["secondary"].keys():
             
             content_sec = structures["secondary"][id]
@@ -51,11 +72,7 @@ class Protein_dataset(Dataset):
             if len(content_sec["sequence"]) > self.min_prot_len and len(content_sec["sequence"]) < self.max_prot_len:
                 feature = struct.convert_dssp_string(content_sec['c8']) + [struct.convert_pol_string(content_pol['polarity_conv'])]
                 features.append(feature)
-
-                label = self.pad_label(content_sec["sequence"], self.max_prot_len)
-                tokenizer = fold.load_tokenizer(self.path_to_esm)
-                tokenized_label = tokenizer([label], return_tensors="pt", add_special_tokens=False)['input_ids']
-                labels.append(tokenized_label[0])
+                labels.append(list(content_sec["sequence"]))
 
         return features, labels
     
@@ -74,5 +91,3 @@ class Protein_dataset(Dataset):
         Y.extend(y)
 
         return X, Y
-        
-
