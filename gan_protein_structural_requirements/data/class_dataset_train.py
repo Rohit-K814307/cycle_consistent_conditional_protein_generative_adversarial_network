@@ -23,7 +23,7 @@ class Protein_dataset(Dataset):
         inps, outs = self.upsample(features, labels)
 
         #shape = (batch_size, number of design objectives)
-        self.X = torch.FloatTensor(inps).unsqueeze(1).repeat(1,self.max_prot_len,1)
+        self.X = torch.FloatTensor(inps).unsqueeze(1).repeat(1,self.max_prot_len,1).long()
 
         #shape = (batch_size, sequence max length, number of amino acids)
         self.Y, self.encode_cats, self.decode_cats = self.onehot_encode(outs)
