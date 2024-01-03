@@ -124,7 +124,7 @@ class Discriminator(nn.Module):
 
 
 #define the gradient locked sequence to vector model
-#this model is based off the ProteinUnet model by Kotowski et al
+#this model is a modified version of the ProteinUnet model by Kotowski et al
 #https://onlinelibrary.wiley.com/doi/full/10.1002/jcc.26432
 
 #Basic block for Unet Model with 3 convolutional units
@@ -234,7 +234,7 @@ class PercentageRegressor(nn.Module):
         return out
 
 #Full ensemble model with Unet architecture
-class SeqToVec(nn.Module):
+class SeqToVecEnsemble(nn.Module):
     def __init__(self, input_size):
         """
         Parameters
@@ -243,7 +243,7 @@ class SeqToVec(nn.Module):
             
         """
 
-        super(SeqToVec, self).__init__()
+        super(SeqToVecEnsemble, self).__init__()
 
         #Contractive path layers
         self.cont1 = BasicBlock3(input_size, [64,64,64])
