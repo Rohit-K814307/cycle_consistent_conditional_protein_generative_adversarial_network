@@ -71,5 +71,6 @@ def get_vocab_encodings():
             line = file.readline().strip()
             arr.append(line[0])
 
-    arr
+    arr.append("<pad>")
+    
     return arr

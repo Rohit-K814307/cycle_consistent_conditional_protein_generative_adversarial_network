@@ -1,29 +1,34 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
-from ..utils import protein_visualizer as viz
+from torch.utils.data import Dataset
 from ..utils import extract_structure as struct
 from ..utils import folding_models as fold
-import numpy as np
-import matplotlib.pyplot as plt
-from torchvision import transforms, utils
-from sklearn.preprocessing import OneHotEncoder
 
 class Protein_dataset(Dataset):
 
-    def __init__(self, root_dir, path_to_esm, min_prot_len, max_prot_len, transforms=None):
+    def __init__(self, root_dir,  min_prot_len, max_prot_len):
         """
-        Arguments:
+        Parameters
+
             root_dir (string): Directory containing PDB files
+
+            min_prot_len (int): minimum length of proteins to filter through
+
+            max_prot_len (int): maximum length of proteins to filter through
+
         """
+
+        #add protein ids for tracking
+        self.ids = []
+
         self.root_dir = root_dir
         self.min_prot_len = min_prot_len
         self.max_prot_len = max_prot_len
-        self.path_to_esm = path_to_esm
         features, labels = self.aggregate_data()
         inps, outs = self.upsample(features, labels)
 
         #shape = (batch_size, number of design objectives)
-        self.X = torch.FloatTensor(inps).unsqueeze(1).repeat(1,self.max_prot_len,1).long()
+        self.inps = inps
+        self.X = torch.FloatTensor(inps).unsqueeze(1).repeat(1,self.max_prot_len,1)
 
         #shape = (batch_size, sequence max length, number of amino acids)
         self.Y, self.encode_cats, self.decode_cats = self.onehot_encode(outs)
@@ -37,14 +42,17 @@ class Protein_dataset(Dataset):
 
     def pad_label(self, sequence, maxlen):
         for _ in range(maxlen - len(sequence)):
-            sequence.append([0] * len(sequence[0]))
+            t = [0] * len(sequence[0])
+            t[-1] = 1
+            sequence.append(t)
 
         return sequence
 
     def onehot_encode(self, labels):
         categories = fold.get_vocab_encodings()
-        cat_dict = {categories[i] : i for i in range(len(categories))}
-        decode_dict = dict(enumerate(categories))
+        cat_dict = {categories[i] : i for i in range(len(categories)) if categories[i] != "X"}
+        cat_dict["<pad>"] = 20
+        decode_dict = {cat_dict[key] : key for key in cat_dict.keys()}
         encoded_data = []
 
         for example in labels:
@@ -52,7 +60,10 @@ class Protein_dataset(Dataset):
 
             for value in example:
                 encoded_val = [0] * int(len(cat_dict.keys()))
-                encoded_val[cat_dict.get(value)] = 1
+                if value != "X":
+                    encoded_val[cat_dict.get(value)] = 1
+                else:
+                    pass
                 datapoint.append(encoded_val)
 
             datapoint = self.pad_label(datapoint, self.max_prot_len)
@@ -73,6 +84,7 @@ class Protein_dataset(Dataset):
                 feature = struct.convert_dssp_string(content_sec['c8']) + [struct.convert_pol_string(content_pol['polarity_conv'])]
                 features.append(feature)
                 labels.append(list(content_sec["sequence"]))
+                self.ids.append(id)
 
         return features, labels
     
@@ -86,6 +98,7 @@ class Protein_dataset(Dataset):
 
         for entry in x:
             y.append(Y[X.index(entry)])
+            self.ids.append(self.ids[X.index(entry)])
 
         X.extend(x)
         Y.extend(y)

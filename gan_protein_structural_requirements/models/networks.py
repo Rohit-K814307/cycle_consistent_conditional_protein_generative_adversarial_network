@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F 
+from gan_protein_structural_requirements.utils import folding_models as fold
+from gan_protein_structural_requirements.utils import extract_structure as struct
 
 
 #define a generator class with a RNN-based network
@@ -30,7 +32,13 @@ class RNN_generator(nn.Module):
 
         self.fc1 = nn.Linear(hidden_dim,output_dim)
 
-        self.activation2 = nn.Softmax(1)
+        ##################
+        ##################
+        #IMPORTANT:
+        #MUST HAVE SOFTMAX
+        #IN FULL ENSEMBLE
+        #TO GET PROBABILI-
+        #TIES
     
 
     def forward(self, latent_noise, objectives):
@@ -38,11 +46,19 @@ class RNN_generator(nn.Module):
 
         x, _ = self.rnn(x)
 
-        x = self.fc1(x)
-
-        out = self.activation2(x)
+        out = self.fc1(x)
 
         return out
+
+#Define U-Net based generator
+
+
+
+
+#Define LSTM based generator
+
+
+
 
 
 #Define discriminator model
@@ -105,36 +121,226 @@ class Discriminator(nn.Module):
         out = self.sigmoid(x)
 
         return out
-    
 
-#define the full protein folding model for easier loss calculations
 
-class ProteinFold(nn.Module):
-    def __init__(self, ):
+#define the gradient locked sequence to vector model
+#this model is based off the ProteinUnet model by Kotowski et al
+#https://onlinelibrary.wiley.com/doi/full/10.1002/jcc.26432
+
+#Basic block for Unet Model with 3 convolutional units
+class BasicBlock3(nn.Module):
+    def __init__(self, input_size, layer_sizes):
         """
         Parameters
-
-
         
+            input_size (int): input size/last dim of model
+            
+            layer_sizes (list): length 3 list with the convolutional sizes of model
+
         """
 
-        super(ProteinFold,self).__init__()
+        super(BasicBlock3,self).__init__()
 
-    def forward(self, seq):
+        self.conv1 = nn.Conv1d(input_size,layer_sizes[0], kernel_size=7, stride=1,padding=0)
+
+        self.activation1 = nn.ReLU()
+
+        self.conv2 = nn.Conv1d(layer_sizes[0], layer_sizes[1], kernel_size=7, stride=1, padding=0)
+
+        self.activation2 = nn.ReLU()
+
+        self.conv3 = nn.Conv1d(layer_sizes[1], layer_sizes[2], kernel_size=7, stride=1, padding=0)
+
+        self.activation3 = nn.ReLU()
+
+    def forward(self, x):
+
+        x = self.conv1(x)
+
+        x = self.activation1(x)
+
+        x = self.conv2(x)
+
+        x = self.activation2(x)
+
+        x = self.conv3(x)
+
+        out = self.activation3(x)
+
+        return out
+    
+#Basic Block for Unet Model with 2 convolutional units
+class BasicBlock2(nn.Module):
+    def __init__(self, input_size, layer_sizes):
+        """
+        Parameters
         
-        #decode onehot sequence
+            input_size (int): input size/last dim of model
+            
+            layer_sizes (list): length 2 list with the convolutional sizes of model
+        """
+
+        super(BasicBlock2, self).__init__()
+
+        self.conv1 = nn.Conv1d(input_size,layer_sizes[0], kernel_size=7, stride=1, padding=0)
+
+        self.activation1 = nn.ReLU()
+
+        self.conv2 = nn.Conv1d(layer_sizes[0], layer_sizes[1], kernel_size=7, stride=1, padding=0)
+
+        self.activation2 = nn.ReLU()
 
 
-        #tokenize for esm
+    def forward(self, x):
 
+        x = self.conv1(x)
 
-        #pass through esm
+        x = self.activation1(x)
 
+        x = self.conv2(x)
 
-        #get DSSP+polarity
+        out = self.activation2(x)
 
+        return out
+
+#Create end model for percentage prediction values
+class PercentageRegressor(nn.Module):
+    def __init__(self, input_size, output_size):
+        """
+        Parameters
         
-        #create objective vector
+            input_size (int): input of size of model from previous ProteinUnet output
+            
+            output_size (int): output vector size of model - c8 SS + 1 or c3 SS + 1
+            
+        """
+
+        super(PercentageRegressor, self).__init__()
+
+        self.flatten = nn.Flatten()
+
+        self.fc = nn.Linear(input_size,output_size)
+
+        self.act = nn.Sigmoid()
+
+    def forward(self, x):
+
+        x = self.flatten(x)
+
+        x = self.fc(x)
+
+        out = self.act(x)
+
+        return out
+
+#Full ensemble model with Unet architecture
+class SeqToVec(nn.Module):
+    def __init__(self, input_size):
+        """
+        Parameters
+        
+            input_size (int): input size of model - should be the vocab size
+            
+        """
+
+        super(SeqToVec, self).__init__()
+
+        #Contractive path layers
+        self.cont1 = BasicBlock3(input_size, [64,64,64])
+
+        self.avgPool1 = nn.AvgPool1d(kernel_size=2)
+
+        self.cont2 = BasicBlock3(64, [64,64,64])
+
+        self.avgPool2 = nn.AvgPool1d(kernel_size=2)
+
+        self.cont3 = BasicBlock3(64, [128,128,128])
+
+        self.avgPool3 = nn.AvgPool1d(kernel_size=2)
+
+        self.cont4 = BasicBlock3(128,[128,128,128])
+
+        self.avgPool4 = nn.AvgPool1d(kernel_size=2)
+
+        #Expanding path layers
+        self.exp1 = BasicBlock2(128, [128,128])
+
+        self.ups1 = nn.Upsample(scale_factor=2, mode='nearest')
+
+        self.exp2 = BasicBlock2(128,[128,128])
+
+        self.ups2 = nn.Upsample(scale_factor=2, mode='nearest')
+
+        self.exp3 = BasicBlock2(128,[64,64])
+
+        self.ups3 = nn.Upsample(scale_factor=2, mode='nearest')
+
+        self.exp4 = BasicBlock2(64,[64,64])
+
+        self.ups4 = nn.Upsample(scale_factor=2, mode='nearest')
+
+        self.fc1 = nn.Linear(7640,64)
+
+        self.act1 = nn.ReLU()
+
+        self.fc2 = nn.Linear(64,9)
+
+        self.act2 = nn.ReLU()
+
+        self.final = PercentageRegressor(576,9)
+
+    def forward(self, x, temperature):
+
+        x = F.gumbel_softmax(x,tau=temperature,hard=True)
+
+        #compute operations for contracting path
+
+        xc1 = self.cont1(x)
+
+        xc1a = self.avgPool1(xc1)
+
+        xc2 = self.cont2(xc1a)
+
+        xc2a = self.avgPool2(xc2)
+
+        xc3 = self.cont3(xc2a)
+
+        xc3a = self.avgPool3(xc3)
+
+        xc4 = self.cont4(xc3a)
+
+        xc4a = self.avgPool4(xc4)
 
 
-        #repeat sequence_length times in objective vector
+        #compute operations for expanding path
+
+        xe1 = self.exp1(xc4a)
+
+        xe1 = self.ups1(torch.concat([xe1,xc4], dim=-1))
+
+        xe2 = self.exp2(xe1)
+
+        xe2 = self.ups2(torch.concat([xe2,xc3], dim=-1))
+
+        xe3 = self.exp3(xe2)
+
+        xe3 = self.ups3(torch.concat([xe3,xc2], dim=-1))
+
+        xe4 = self.exp4(xe3)
+
+        xe4 = self.ups4(torch.concat([xe4,xc1], dim=-1))
+
+
+        #compute operations final linear prediction layers
+
+        x = self.fc1(xe4)
+
+        x = self.act1(x)
+
+        x = self.fc2(x)
+
+        x = self.act2(x)
+
+        out = self.final(x)
+
+        return out
