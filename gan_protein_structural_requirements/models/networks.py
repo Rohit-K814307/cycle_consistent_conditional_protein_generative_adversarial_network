@@ -128,6 +128,7 @@ class Discriminator(nn.Module):
 #https://onlinelibrary.wiley.com/doi/full/10.1002/jcc.26432
 
 #Basic block for Unet Model with 3 convolutional units
+    
 class BasicBlock3(nn.Module):
     def __init__(self, input_size, layer_sizes):
         """
@@ -170,6 +171,7 @@ class BasicBlock3(nn.Module):
         return out
     
 #Basic Block for Unet Model with 2 convolutional units
+    
 class BasicBlock2(nn.Module):
     def __init__(self, input_size, layer_sizes):
         """
@@ -204,6 +206,7 @@ class BasicBlock2(nn.Module):
         return out
 
 #Create end model for percentage prediction values
+    
 class PercentageRegressor(nn.Module):
     def __init__(self, input_size, output_size):
         """
@@ -234,6 +237,7 @@ class PercentageRegressor(nn.Module):
         return out
 
 #Full ensemble model with Unet architecture
+    
 class SeqToVecEnsemble(nn.Module):
     def __init__(self, input_size):
         """

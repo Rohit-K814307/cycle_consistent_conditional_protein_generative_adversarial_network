@@ -38,7 +38,11 @@ class Protein_dataset(Dataset):
         return len(self.X)
     
     def __getitem__(self, idx):
-        return self.X[idx], self.Y[idx]
+        x = self.X[idx]
+        y = self.Y[idx]
+        ids = self.ids[idx]
+
+        return {"X":x,"Y":y,"IDS":ids}
 
     def pad_label(self, sequence, maxlen):
         for _ in range(maxlen - len(sequence)):
