@@ -161,6 +161,23 @@ def jupy_viz_obj(pdb):
     view.setStyle({'model': -1}, {"cartoon": {'color': 'spectrum'}})
 
 
+#define class for protein vizualization during training
+class ProteinVisualizer():
+    def __init__(self, save_path):
+        """Initialize ProteinVisualizer
+        
+        Parameters:
+        
+            save_path (string): path to save visializations to
+        
+        """
+
+        self.save_path = save_path
+    
+    def viz_protein(self, onehot_sequence, map):
+
+        pass
+        
 
 
 

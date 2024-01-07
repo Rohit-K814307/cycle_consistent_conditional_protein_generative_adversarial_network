@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 from ..utils import extract_structure as struct
 from ..utils import folding_models as fold
 
-class Protein_dataset(Dataset):
+class Eval_Protein_dataset(Dataset):
 
     def __init__(self, root_dir,  min_prot_len, max_prot_len):
         """
@@ -24,14 +24,13 @@ class Protein_dataset(Dataset):
         self.min_prot_len = min_prot_len
         self.max_prot_len = max_prot_len
         features, labels = self.aggregate_data()
-        inps, outs = self.upsample(features, labels)
 
         #shape = (batch_size, number of design objectives)
-        self.inps = inps
-        self.X = torch.FloatTensor(inps).unsqueeze(1).repeat(1,self.max_prot_len,1)
+        self.inps = features
+        self.X = torch.FloatTensor(features).unsqueeze(1).repeat(1,self.max_prot_len,1)
 
         #shape = (batch_size, sequence max length, number of amino acids)
-        self.Y, self.encode_cats, self.decode_cats = self.onehot_encode(outs)
+        self.Y, self.encode_cats, self.decode_cats = self.onehot_encode(labels)
         
 
     def __len__(self):
@@ -90,19 +89,3 @@ class Protein_dataset(Dataset):
 
         return features, labels
     
-    def upsample(self, X, Y):
-
-        y = []
-        x = []
-        #upsample from classes that are not as even
-        sorted_list = sorted(X, key=lambda x: max(x[1:8]), reverse=True)
-        x += sorted_list[:50]
-
-        for entry in x:
-            y.append(Y[X.index(entry)])
-            self.ids.append(self.ids[X.index(entry)])
-
-        X.extend(x)
-        Y.extend(y)
-
-        return X, Y

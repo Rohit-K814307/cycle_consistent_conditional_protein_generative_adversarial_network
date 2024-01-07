@@ -205,8 +205,50 @@ class BasicBlock2(nn.Module):
 
         return out
 
+#create model for polarity percentage prediction values
+
+class PolarityRegressor(nn.Module):
+    def __init__(self, sequence_length, vocab_size, hidden_size):
+        """
+        Parameters
+
+            sequence_length (int): length of each sequence
+
+            vocab_size (int): number of total one hot encodings
+
+            hidden_size (int): hidden layer size for polarity
+            
+        """
+
+        super(PolarityRegressor, self).__init__()
+
+        self.flatten = nn.Flatten()
+
+        self.fc1 = nn.Linear(sequence_length * vocab_size, hidden_size)
+
+        self.relu = nn.ReLU()
+
+        self.fc2 = nn.Linear(hidden_size, 1)
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+
+        x = self.flatten(x) 
+
+        x = self.fc1(x)
+
+        x = self.relu(x)
+
+        x = self.fc2(x)
+
+        out = self.sigmoid(x)
+
+        return out
+
+
 #Create end model for percentage prediction values
-    
+
 class PercentageRegressor(nn.Module):
     def __init__(self, input_size, output_size):
         """
@@ -214,7 +256,7 @@ class PercentageRegressor(nn.Module):
         
             input_size (int): input of size of model from previous ProteinUnet output
             
-            output_size (int): output vector size of model - c8 SS + 1 or c3 SS + 1
+            output_size (int): output vector size of model - c8 SS or c3 SS
             
         """
 
@@ -239,11 +281,13 @@ class PercentageRegressor(nn.Module):
 #Full ensemble model with Unet architecture
     
 class SeqToVecEnsemble(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size, sequence_length):
         """
         Parameters
         
             input_size (int): input size of model - should be the vocab size
+
+            sequence_length (int): length of each sequence
             
         """
 
@@ -291,7 +335,9 @@ class SeqToVecEnsemble(nn.Module):
 
         self.act2 = nn.ReLU()
 
-        self.final = PercentageRegressor(576,9)
+        self.final1 = PercentageRegressor(576,8)
+
+        self.final2 = PolarityRegressor(sequence_length, input_size, 64)
 
     def forward(self, x, temperature):
 
@@ -337,14 +383,18 @@ class SeqToVecEnsemble(nn.Module):
 
         #compute operations final linear prediction layers
 
-        x = self.fc1(xe4)
+        x1 = self.fc1(xe4)
 
-        x = self.act1(x)
+        x1 = self.act1(x1)
 
-        x = self.fc2(x)
+        x1 = self.fc2(x1)
 
-        x = self.act2(x)
+        x1 = self.act2(x1)
 
-        out = self.final(x)
+        x1 = self.final1(x1)
+
+        x2 = self.final2(x)
+
+        out = torch.concat([x1, x2], dim=-1)
 
         return out

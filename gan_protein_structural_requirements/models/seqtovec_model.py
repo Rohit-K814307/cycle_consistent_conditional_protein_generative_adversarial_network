@@ -8,17 +8,21 @@ import torch.nn as nn
 
 
 class SeqToVecModel(nn.Module):
-    def __init__(self, input_size, lr, lr_beta):
+    def __init__(self, input_size, sequence_length, lr, lr_beta, epsilon):
         """Initialize SeqToVec Model
         
         Parameters:
         
             input_size (int): input vocab size of model
+
+            sequence_length (int): length of each sequence
             
             lr (float): learning rate of model
             
             lr_beta: learning rate beta of model
-            
+
+            epsilon: epsilon value of model
+
         """
 
         super(SeqToVecModel, self).__init__()
@@ -35,9 +39,9 @@ class SeqToVecModel(nn.Module):
         self.score_metric = nn.MSELoss()
         self.net_loss = nn.MSELoss()
 
-        self.net = networks.SeqToVecEnsemble(input_size)
-        self.optim = torch.optim.Adam(self.net.parameters(),lr=lr, betas=(lr_beta, 0.999))
+        self.net = networks.SeqToVecEnsemble(input_size, sequence_length)
 
+        self.optim = torch.optim.Adam(self.net.parameters(),lr=lr, betas=(lr_beta, 0.999), eps=epsilon, weight_decay=0)
 
     def set_input(self, input):
         """Unpack input data and perform data allocation steps
@@ -97,3 +101,11 @@ class SeqToVecModel(nn.Module):
         self.backward()
 
         self.optim.step()
+
+    def save_model(self, save_dir, epoch, iters):
+
+        suffix = f"epoch_{epoch}_iters_{iters}"
+
+        save_dir = os.path.join(save_dir, suffix)
+
+        torch.save(self.net.state_dict(), save_dir)
