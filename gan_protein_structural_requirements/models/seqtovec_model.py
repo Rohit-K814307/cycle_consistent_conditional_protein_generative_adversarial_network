@@ -59,17 +59,11 @@ class SeqToVecModel(nn.Module):
         self.ids = input["IDS"]
 
 
-    def forward(self, temperature):
-        """Forward the model
-        
-        Parameters:
-        
-            temperature (int): value that decreases as training epoch increases for Gumbel-Softmax distribution
-
-        """
+    def forward(self):
+        """Forward the model"""
 
         #compute output tensor
-        self.y_hat = self.net(self.X,temperature)
+        self.y_hat = self.net(self.X)
 
         #compute scores for later visualization
         self.mse_ahelix = self.score_metric(self.y_hat.detach()[:,0],self.y.detach()[:,0])
@@ -92,9 +86,9 @@ class SeqToVecModel(nn.Module):
         self.loss_net.backward()
 
 
-    def optimize_parameters(self, temperature):
+    def optimize_parameters(self):
 
-        self.forward(temperature=temperature)
+        self.forward()
 
         self.optim.zero_grad()
 

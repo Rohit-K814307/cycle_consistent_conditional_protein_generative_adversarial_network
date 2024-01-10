@@ -65,4 +65,13 @@ def test_seqtovec(test_dataset, model, model_save_path):
 
         print(f"Polarity Loss: {mse_pol}")
 
-    return {}
+    return {"Total Loss": loss,
+            "Alpha Helix Loss": mse_ahelix,
+            "Beta Bridge Loss": mse_betabridge,
+            "Strand Loss": mse_strand,
+            "3-10 Helix Loss": mse_310helix,
+            "Pi Helix Loss": mse_pi,
+            "Turn Loss": mse_turn,
+            "Bend Loss":mse_bend,
+            "None Loss":mse_none,
+            "Polarity Loss":mse_pol}

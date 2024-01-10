@@ -4,7 +4,7 @@ import matplotlib
 import os
 import gan_protein_structural_requirements.models as models
 
-def train_seqtovec(model, dataset, epochs, temperature_init, lr_decay, device, save_freq, root_dir, model_name):
+def train_seqtovec(model, dataset, epochs, lr_decay, device, save_freq, root_dir, model_name):
     """Train a model
     
     Parameters:
@@ -14,8 +14,6 @@ def train_seqtovec(model, dataset, epochs, temperature_init, lr_decay, device, s
         dataset (torch.utils.data.DataLoader): dataloader object with training data
 
         epochs (int): number of epochs to train model
-
-        temperature_init (int): initial temperature of gumbel_softmax
 
         lr_decay (float): learning rate decay over training time (exponential)
 
@@ -60,7 +58,7 @@ def train_seqtovec(model, dataset, epochs, temperature_init, lr_decay, device, s
             model.set_input(data)
 
             #optimize model parameters
-            model.optimize_parameters(temperature_init)
+            model.optimize_parameters()
 
             #add tensorboard logs
             scores = models.get_metrics(model, model_metrics)

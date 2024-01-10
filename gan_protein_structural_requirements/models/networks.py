@@ -64,7 +64,7 @@ class RNN_generator(nn.Module):
 #Define discriminator model
 
 class Discriminator(nn.Module):
-    def __init__(self, batch_size, seq_length, discriminator_layer_size, objective_dim, num_classes=21, embed_size=32):
+    def __init__(self, batch_size, seq_length, discriminator_layer_size, objective_dim, num_classes=20):
         """
         Parameters
 
@@ -78,17 +78,16 @@ class Discriminator(nn.Module):
 
             num_classes (int): number of classes in onehot vector of sequence
 
-            embed_size (int): embedding size for onehot sequence
-
         """
 
         super(Discriminator, self).__init__()
 
         self.batch_size = batch_size
         self.seq_length = seq_length
-        self.embedding = nn.Embedding(num_classes,embed_size)
 
-        self.fc1 = nn.Linear(((num_classes * embed_size) + objective_dim) * seq_length, discriminator_layer_size[0])
+        self.flatten = nn.Flatten()
+
+        self.fc1 = nn.Linear(num_classes * seq_length + objective_dim * seq_length, discriminator_layer_size[0])
 
         self.leakyrelu1 = nn.LeakyReLU(0.2)
 
@@ -101,8 +100,6 @@ class Discriminator(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, seq, objectives):
-        
-        seq = self.embedding(seq).view(self.batch_size, self.seq_length,-1)
 
         x = torch.cat([seq,objectives],dim=-1)
 
@@ -339,9 +336,7 @@ class SeqToVecEnsemble(nn.Module):
 
         self.final2 = PolarityRegressor(sequence_length, input_size, 64)
 
-    def forward(self, x, temperature):
-
-        x = F.gumbel_softmax(x,tau=temperature,hard=True)
+    def forward(self, x):
 
         #compute operations for contracting path
 
