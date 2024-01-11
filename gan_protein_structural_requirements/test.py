@@ -31,7 +31,7 @@ def test_seqtovec(test_dataset, model, model_save_path):
 
         X = data["Y"].float().permute(0,2,1)
 
-        y_hat = model(X, 1)
+        y_hat = model(X)
 
         loss = loss_fn(y_hat, y)
 

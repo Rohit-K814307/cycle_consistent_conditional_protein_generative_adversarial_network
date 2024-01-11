@@ -4,7 +4,7 @@ import matplotlib
 import os
 import gan_protein_structural_requirements.models as models
 
-def train_seqtovec(model, dataset, epochs, lr_decay, device, save_freq, root_dir, model_name):
+def train(model, dataset, epochs, lr_decay, device, save_freq, root_dir, model_name):
     """Train a model
     
     Parameters:
@@ -29,8 +29,8 @@ def train_seqtovec(model, dataset, epochs, lr_decay, device, save_freq, root_dir
 
     save_dir = os.path.join(root_dir, "checkpoints", model_name)
     log_dir = os.path.join(root_dir, "checkpoints", model_name, "logs")
-    os.makedirs(save_dir)
-    os.makedirs(log_dir)
+    os.makedirs(save_dir, exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
 
     writer = SummaryWriter(log_dir=log_dir)
 
@@ -75,7 +75,7 @@ def train_seqtovec(model, dataset, epochs, lr_decay, device, save_freq, root_dir
             iter_nums += 1
 
         #calculate total number of iterations
-        total_iters += iter_nums + 1
+        total_iters += iter_nums
 
         #save model
         if epoch % save_freq == 0:

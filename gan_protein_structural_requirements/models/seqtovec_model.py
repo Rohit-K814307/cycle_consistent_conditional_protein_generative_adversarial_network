@@ -66,15 +66,16 @@ class SeqToVecModel(nn.Module):
         self.y_hat = self.net(self.X)
 
         #compute scores for later visualization
-        self.mse_ahelix = self.score_metric(self.y_hat.detach()[:,0],self.y.detach()[:,0])
-        self.mse_betabridge = self.score_metric(self.y_hat.detach()[:,1],self.y.detach()[:,1])
-        self.mse_strand = self.score_metric(self.y_hat.detach()[:,2],self.y.detach()[:,2])
-        self.mse_310helix = self.score_metric(self.y_hat.detach()[:,3],self.y.detach()[:,3])
-        self.mse_pi = self.score_metric(self.y_hat.detach()[:,4],self.y.detach()[:,4])
-        self.mse_turn = self.score_metric(self.y_hat.detach()[:,5],self.y.detach()[:,5])
-        self.mse_bend = self.score_metric(self.y_hat.detach()[:,6],self.y.detach()[:,6])
-        self.mse_none = self.score_metric(self.y_hat.detach()[:,7],self.y.detach()[:,7])
-        self.mse_pol = self.score_metric(self.y_hat.detach()[:,8],self.y.detach()[:,8])
+        with torch.no_grad():
+            self.mse_ahelix = self.score_metric(self.y_hat.detach()[:,0],self.y.detach()[:,0])
+            self.mse_betabridge = self.score_metric(self.y_hat.detach()[:,1],self.y.detach()[:,1])
+            self.mse_strand = self.score_metric(self.y_hat.detach()[:,2],self.y.detach()[:,2])
+            self.mse_310helix = self.score_metric(self.y_hat.detach()[:,3],self.y.detach()[:,3])
+            self.mse_pi = self.score_metric(self.y_hat.detach()[:,4],self.y.detach()[:,4])
+            self.mse_turn = self.score_metric(self.y_hat.detach()[:,5],self.y.detach()[:,5])
+            self.mse_bend = self.score_metric(self.y_hat.detach()[:,6],self.y.detach()[:,6])
+            self.mse_none = self.score_metric(self.y_hat.detach()[:,7],self.y.detach()[:,7])
+            self.mse_pol = self.score_metric(self.y_hat.detach()[:,8],self.y.detach()[:,8])
 
 
     def backward(self):
