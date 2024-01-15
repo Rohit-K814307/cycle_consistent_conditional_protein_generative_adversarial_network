@@ -34,15 +34,13 @@ def load_tokenizer(path):
 def load_esm(path,verbose=True):
     tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=path)
     model = EsmForProteinFolding.from_pretrained(path, low_cpu_mem_usage=True)
-    model.trunk.set_chunk_size(64)
 
     if verbose:
         print(model)
 
     return model, tokenizer
 
-def esm_predict(seq, model, tokenizer):
-    tokenized_input = tokenizer([seq], return_tensors="pt", add_special_tokens=False)['input_ids']
+def esm_predict(model, tokenized_input):
     with torch.no_grad():
         output = model(tokenized_input)
 
@@ -50,12 +48,11 @@ def esm_predict(seq, model, tokenizer):
 
     return output, pdb
 
-def esm_batch_predict(seqs, model, tokenizer):
+def esm_batch_predict(seqs, model):
     preds = []
     for seq in seqs:
-        tokenized_input = tokenizer([seq], return_tensors="pt", add_special_tokens=False)['input_ids']
         with torch.no_grad():
-            output = model(tokenized_input)
+            output = model(seq)
 
         pdb = convert_outputs_to_pdb(output)
         preds.append((output, pdb))

@@ -10,6 +10,9 @@ from prody import parsePDBHeader
 from typing import Optional
 import os
 import py3Dmol
+from PIL import Image
+import matplotlib.pyplot as plt
+from io import BytesIO
 
 def read_pdb_to_dataframe(pdb_path: Optional[str] = None, model_index: int = 1, parse_header: bool = True, ) -> pd.DataFrame:
     """
@@ -160,7 +163,19 @@ def jupy_viz_obj(pdb):
     view.addModel("".join(pdb), 'pdb')
     view.setStyle({'model': -1}, {"cartoon": {'color': 'spectrum'}})
 
+    return view
+
         
+def view_to_plt(view):
+    image_data = view.toImage(format='png')
+    image = Image.open(BytesIO(image_data))
+
+    fig, ax = plt.subplots()
+    ax.imshow(image)
+    ax.axis('off')
+
+    return ax
+
 
 
 

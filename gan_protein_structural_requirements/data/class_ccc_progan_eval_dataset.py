@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import Dataset
-from ..utils import extract_structure as struct
-from ..utils import folding_models as fold
+from gan_protein_structural_requirements.utils import extract_structure as struct
+from gan_protein_structural_requirements.utils import folding_models as fold
 
 class Eval_Protein_dataset(Dataset):
 

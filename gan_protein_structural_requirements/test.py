@@ -31,7 +31,9 @@ def test_seqtovec(test_dataset, model, model_save_path):
 
         X = data["Y"].float().permute(0,2,1)
 
-        y_hat = model(X)
+        y_sec, y_pol = model(X)
+
+        y_hat = torch.cat([y_sec, y_pol], dim=-1)
 
         loss = loss_fn(y_hat, y)
 

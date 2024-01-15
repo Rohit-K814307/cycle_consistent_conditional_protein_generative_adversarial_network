@@ -22,4 +22,10 @@ mkdir -p $PWD/gan_protein_structural_requirements/data/raw/test
 #uncompress the data
 ./gan_protein_structural_requirements/scripts/uncompress.sh
 
+#save the data to pytorch to make it easier
+
+mkdir -p $PWD/gan_protein_structural_requirements/data/save
+
+python -m gan_protein_structural_requirements.data.save_datasets
+
 echo "Repo Setup Complete"

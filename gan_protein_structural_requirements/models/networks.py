@@ -42,6 +42,7 @@ class RNN_generator(nn.Module):
     
 
     def forward(self, latent_noise, objectives):
+
         x = torch.concat([latent_noise, objectives], dim=-1)
 
         x, _ = self.rnn(x)
@@ -227,8 +228,6 @@ class PolarityRegressor(nn.Module):
 
         self.fc2 = nn.Linear(hidden_size, 1)
 
-        self.sigmoid = nn.Sigmoid()
-
     def forward(self, x):
 
         x = self.flatten(x) 
@@ -237,9 +236,7 @@ class PolarityRegressor(nn.Module):
 
         x = self.relu(x)
 
-        x = self.fc2(x)
-
-        out = self.sigmoid(x)
+        out = self.fc2(x)
 
         return out
 
@@ -263,21 +260,17 @@ class PercentageRegressor(nn.Module):
 
         self.fc = nn.Linear(input_size,output_size)
 
-        self.act = nn.Sigmoid()
-
     def forward(self, x):
 
         x = self.flatten(x)
 
-        x = self.fc(x)
-
-        out = self.act(x)
+        out = self.fc(x)
 
         return out
 
 #Full ensemble model with Unet architecture
     
-class SeqToVecEnsemble(nn.Module):
+class SeqToSecondary(nn.Module):
     def __init__(self, input_size, sequence_length):
         """
         Parameters
@@ -288,7 +281,7 @@ class SeqToVecEnsemble(nn.Module):
             
         """
 
-        super(SeqToVecEnsemble, self).__init__()
+        super(SeqToSecondary, self).__init__()
 
         #Contractive path layers
         self.cont1 = BasicBlock3(input_size, [64,64,64])
@@ -332,9 +325,7 @@ class SeqToVecEnsemble(nn.Module):
 
         self.act2 = nn.ReLU()
 
-        self.final1 = PercentageRegressor(576,8)
-
-        self.final2 = PolarityRegressor(sequence_length, input_size, 64)
+        self.fc3 = PercentageRegressor(576,8)
 
     def forward(self, x):
 
@@ -386,10 +377,34 @@ class SeqToVecEnsemble(nn.Module):
 
         x1 = self.act2(x1)
 
-        x1 = self.final1(x1)
-
-        x2 = self.final2(x)
-
-        out = torch.concat([x1, x2], dim=-1)
+        out = self.fc3(x1)
 
         return out
+    
+
+class SeqToVecEnsemble(nn.Module):
+    def __init__(self, input_size, sequence_length):
+        """
+        Parameters
+        
+            input_size (int): input size of model - should be the vocab size
+
+            sequence_length (int): length of each sequence
+            
+        """
+
+        super(SeqToVecEnsemble, self).__init__()
+
+        self.net_sec = SeqToSecondary(input_size, sequence_length)
+
+        self.net_pol = PolarityRegressor(sequence_length, input_size, 64)
+
+    def forward(self, x):
+
+        sec = self.net_sec(x)
+
+        pol = self.net_pol(x)
+
+        return sec, pol
+    
+    

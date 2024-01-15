@@ -4,7 +4,7 @@ import matplotlib
 import os
 import gan_protein_structural_requirements.models as models
 
-def train(model, dataset, epochs, lr_decay, device, save_freq, root_dir, model_name):
+def train(model, dataset, epochs, lr_decays, device, save_freq, root_dir, model_name, map=None, viz=False):
     """Train a model
     
     Parameters:
@@ -15,7 +15,7 @@ def train(model, dataset, epochs, lr_decay, device, save_freq, root_dir, model_n
 
         epochs (int): number of epochs to train model
 
-        lr_decay (float): learning rate decay over training time (exponential)
+        lr_decay (list): list of learning rate decays over training time (exponential)
 
         device (torch.device): device to run training on
 
@@ -24,6 +24,10 @@ def train(model, dataset, epochs, lr_decay, device, save_freq, root_dir, model_n
         root_dir (string): directory where model checkpoints, logs, and information should be saved
 
         model_name (string): name of model
+
+        map (dict): decoding map for onehot outputs - reference from dataset.decode_cats
+        
+        viz (bool): vizualize outputs of model
 
     """
 
@@ -36,12 +40,12 @@ def train(model, dataset, epochs, lr_decay, device, save_freq, root_dir, model_n
 
     model.to(device)
     model.train()
-    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=model.optim, gamma=lr_decay)
+    lr_schedulers = {f"lr_sched_{i}": torch.optim.lr_scheduler.ExponentialLR(optimizer=model.optimizers[i], gamma=lr_decays[i]) for i in range(len(model.optimizers))}
     total_iters = 1
     model_metrics = model.score_names
     model_losses = model.loss_names
 
-    print("|-----------------------initializing model-----------------------|")
+    print("|-----------------------Initializing Model-----------------------|")
     print()
     print(model)
     print()
@@ -68,11 +72,22 @@ def train(model, dataset, epochs, lr_decay, device, save_freq, root_dir, model_n
             writer.add_scalars("losses",losses,total_iters)
 
             #print metrics
-            models.print_metrics(epoch,iter+1,scores,losses)
+            models.print_metrics(epoch,iter,scores,losses)
             print()
             print()
 
             iter_nums += 1
+
+            #compute visuals if iter number passed
+            if total_iters % 1 == 0 and viz:
+
+                print(f"|----------Computing Visuals At Epoch {epoch}, iters {total_iters}.----------|")
+                plot, id = model.get_viz(map)
+                writer.add_figure(f"Prediction For Conditions of {id}", plot, global_step=total_iters)
+                print()
+                print()
+
+            
 
         #calculate total number of iterations
         total_iters += iter_nums
@@ -85,7 +100,8 @@ def train(model, dataset, epochs, lr_decay, device, save_freq, root_dir, model_n
             model.save_model(save_dir, epoch, total_iters)
 
         #decay learning rate
-        lr_scheduler.step()
+        for lr_scheduler in lr_schedulers.values():
+            lr_scheduler.step()
 
     writer.close()
     print("|-------------------------End of Training------------------------|")

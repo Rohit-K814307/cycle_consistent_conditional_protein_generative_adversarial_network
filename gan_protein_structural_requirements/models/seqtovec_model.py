@@ -37,12 +37,16 @@ class SeqToVecModel(nn.Module):
         self.networks = ["net"]
 
         self.score_metric = nn.MSELoss()
-        self.net_loss = nn.MSELoss()
+        self.sec_loss = nn.MSELoss()
+        self.pol_loss = nn.MSELoss()
 
         self.net = networks.SeqToVecEnsemble(input_size, sequence_length)
 
         self.optim = torch.optim.Adam(self.net.parameters(),lr=lr, betas=(lr_beta, 0.999), eps=epsilon, weight_decay=0)
 
+        self.optimizers = [self.optim]
+
+        
     def set_input(self, input):
         """Unpack input data and perform data allocation steps
 
@@ -55,6 +59,10 @@ class SeqToVecModel(nn.Module):
         self.X = input["Y"].float().permute(0,2,1)
 
         self.y = input["X"][:,0,:].float()
+        
+        self.y_sec = input["X"][:,0,:8].float()
+
+        self.y_pol = input["X"][:,0,-1].unsqueeze(1).float()
 
         self.ids = input["IDS"]
 
@@ -63,7 +71,9 @@ class SeqToVecModel(nn.Module):
         """Forward the model"""
 
         #compute output tensor
-        self.y_hat = self.net(self.X)
+        self.sec, self.pol = self.net(self.X)
+
+        self.y_hat = torch.concat([self.sec,self.pol],dim=-1)
 
         #compute scores for later visualization
         with torch.no_grad():
@@ -81,7 +91,9 @@ class SeqToVecModel(nn.Module):
     def backward(self):
 
         #find loss of the network
-        self.loss_net = self.net_loss(self.y_hat, self.y)
+        self.loss_sec = self.sec_loss(self.sec, self.y_sec)
+        self.loss_pol = self.pol_loss(self.pol, self.y_pol)
+        self.loss_net = self.loss_sec + self.loss_pol
 
         #send loss backward to compute gradients
         self.loss_net.backward()
