@@ -80,7 +80,7 @@ class RNN_CCCProGANModel(nn.Module):
         self.loss_names = ["loss_seq", "loss_obj", "loss_gan", "loss_g", "loss_d"]
         self.networks = ["net_g","net_d","net_r"]
 
-        self.seq_loss_fn = nn.CosineSimilarity(dim=-1, eps=cos_eps)
+        self.seq_loss_fn = nn.CosineSimilarity(dim=-1, eps=cos_eps) #https://digitalcommons.unl.edu/cgi/viewcontent.cgi?article=1175&context=computerscidiss
         self.obj_loss_fn = nn.MSELoss()
         self.gan_loss_fn = nn.BCELoss()
 
@@ -165,7 +165,7 @@ class RNN_CCCProGANModel(nn.Module):
     def backward_g(self):
         #calculate gan losses
         self.loss_obj = self.obj_loss_fn(self.x_hat, self.X[:,0,:].float()) * self.lambda_obj
-        self.loss_seq = self.seq_loss_fn(self.gen_seq, self.Y.float()).pow(2).mean() * self.lambda_seq #square of cos similarity to get rid of potential negatives since range of cos is [-1,1]
+        self.loss_seq = self.seq_loss_fn(self.r_x, self.Y.float()).pow(2).mean() * self.lambda_seq #square of cos similarity to get rid of potential negatives since range of cos is [-1,1]
         self.loss_gan = self.gan_loss_fn(self.net_d(self.gen_seq.long(), self.X), self.real_labels) * self.lambda_g
 
         #summed entire gan loss

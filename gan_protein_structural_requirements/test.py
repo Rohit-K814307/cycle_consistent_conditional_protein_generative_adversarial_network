@@ -1,9 +1,12 @@
+import gan_protein_structural_requirements.models as models
+import gan_protein_structural_requirements.models.metrics as m
 import torch
-from torch.utils.tensorboard import SummaryWriter
+import torch.nn as nn
+import torch.nn.functional as F
 import matplotlib
 import os
-import torch.nn as nn
-import gan_protein_structural_requirements.models as models
+import numpy as np, numpy.random
+import random
 
 def test_seqtovec(test_dataset, model, model_save_path):
     """
@@ -77,3 +80,130 @@ def test_seqtovec(test_dataset, model, model_save_path):
             "Bend Loss":mse_bend,
             "None Loss":mse_none,
             "Polarity Loss":mse_pol}
+
+########################################################################################
+#protein generation model evaluation and testing code
+
+#define load generator function
+def load_generator(model, save_path):
+    model.load_state_dict(torch.load(save_path))
+    model.eval()
+    return model
+
+
+#define function for cleaning and setting data for input to generator and regular inference
+def set_data(input_batch, max_prot_len):
+    """
+    Parameters:
+    
+        input_batch (list): list of dictionaries in c8 DSSP + polarity format 
+            with values of proportions
+            dictionary keys:
+                - "a_helix"
+                - "beta-bridge"
+                - "strand"
+                - "3-10-helix"
+                - "pi-helix"
+                - "turn"
+                - "bend"
+                - "none"
+                - "pol"
+
+        max_prot_len
+                
+    """
+
+    data = [[c["a_helix"], c["beta-bridge"], c["strand"], 
+            c["3-10-helix"], c["pi-helix"], c["turn"],
+            c["bend"], c["none"], c["pol"]] for c in input_batch]
+    data = torch.tensor(data).unsqueeze(1).repeat(1,max_prot_len,1)
+
+    return data
+
+
+#create random input dataset of conditions and return full dataset
+def create_rand_inputs(size, max_prot_len):
+
+    data = []
+    for _ in range(size):
+
+        random_c8 = np.random.dirichlet(np.ones(8),size=1)[0]
+
+        data.append({"a-helix":random_c8[0], "beta-bridge":random_c8[1], 
+                      "strand":random_c8[2], "3-10-helix":random_c8[3], 
+                      "pi-helix":random_c8[4], "turn":random_c8[5],
+                      "bend":random_c8[6], "none":random_c8[7], 
+                      "pol":random.randint(0,1)})
+        
+    return set_data(data, max_prot_len)
+
+
+#define method to process outputs of model into onehot vectors
+# and into string-based sequences of amino acids
+def process_outs(outs, map):
+    output = F.gumbel_softmax(outs,tau=1,hard=True)
+    
+    sequences = []
+
+    for sequence in output:
+        seq = ""
+        for residue in sequence:
+            seq += map[torch.argmax(residue,dim=-1).item()]
+
+        sequences.append(seq)
+
+    return sequences
+
+
+#randomly generate num_proteins proteins and get diversity of outputs and sequences
+def get_metrics_rand(model, num_proteins, map, max_prot_len, latent_dim):
+    
+    data = create_rand_inputs(num_proteins,max_prot_len)
+
+    latent_input = torch.randn(data.size(0), max_prot_len, latent_dim)
+    outs = model(latent_input, data)
+    sequences = process_outs(outs, map)
+
+    return {
+        "Design Objectives":data[:,0,:].numpy(),
+        "Sequences":sequences,
+        "Diversity":m.seq_diversity(F.gumbel_softmax(outs, tau=1,hard=True))
+    }
+
+
+#get metrics for one dataset of processed x and processed y
+def get_metrics_dtst(model, X, y, cos_eps, max_prot_len, latent_dim):
+    """
+    Parameters:
+    
+        model: model to train on
+        
+        X: input of dataset (should be processed)
+        
+        y: labels of dataset (should be processed)
+        
+        cos_eps: same epsilon value for cosine similarity used in training
+
+        max_prot_len: max length of generated proteins
+
+        latent_dim: same dimension of latent input value as used in training
+
+    """
+
+    with torch.no_grad():
+
+        latent_input = torch.randn(X.size(0), max_prot_len, latent_dim)
+        onehot = F.gumbel_softmax(model(latent_input, X),tau=1,hard=True)
+        seq_loss_fn = nn.CosineSimilarity(dim=-1,eps=cos_eps)
+
+
+
+        metrics = {"avg_accuracy":m.seq_feasibility(onehot,y),
+                   "avg_diversity":m.seq_diversity(onehot),
+                   "avg_cos_similarity":seq_loss_fn(onehot, y)}
+
+        return metrics
+    
+
+def comput_pdb_from_sequences(sequences):
+    pass
