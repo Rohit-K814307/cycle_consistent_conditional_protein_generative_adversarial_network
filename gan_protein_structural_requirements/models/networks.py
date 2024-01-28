@@ -26,11 +26,17 @@ class RNN_generator(nn.Module):
 
         super(RNN_generator, self).__init__()
 
-        self.rnn = nn.RNN(latent_dim + objective_dim, hidden_dim, num_rnn_layers, batch_first=True)
+        self.embed = nn.Linear(objective_dim,hidden_dim)
+
+        self.activate_embed = nn.LeakyReLU(0.2)
+
+        self.rnn = nn.RNN(latent_dim + hidden_dim, hidden_dim, num_rnn_layers, batch_first=True)
+        self.rnn.apply(self.init_weights)
 
         self.activation1 = nn.LeakyReLU(0.2)
 
         self.fc1 = nn.Linear(hidden_dim,output_dim)
+        self.fc1.apply(self.init_weights)
 
         ##################
         ##################
@@ -40,14 +46,80 @@ class RNN_generator(nn.Module):
         #TO GET PROBABILI-
         #TIES
     
+    def init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            nn.init.xavier_uniform_(module.weight)
+            module.bias.data.fill_(0.01)
+        elif isinstance(module, nn.RNN):
+            for name, param in module.named_parameters():
+                if 'weight_ih' in name or 'weight_hh' in name:
+                    nn.init.xavier_uniform_(param.data)
+                elif 'bias' in name:
+                    nn.init.constant_(param.data, 0.01)
 
     def forward(self, latent_noise, objectives):
 
-        x = torch.concat([latent_noise, objectives], dim=-1)
+        x = self.embed(objectives)
+
+        x = self.activate_embed(x)
+
+        x = torch.concat([latent_noise, x], dim=-1)
 
         x, _ = self.rnn(x)
 
         out = self.fc1(x)
+
+        return out
+
+#Define CNN Generator
+class CNNGenerator(nn.Module):
+    def __init__(self, input_dim, objective_dim, sequence_length, vocab_size, hidden_dims):
+        super(CNNGenerator, self).__init__()
+        
+        self.input_dim = input_dim
+        self.objective_dim = objective_dim
+        self.seq_len = sequence_length
+        self.vocab_size = vocab_size
+        self.hidden_dims = hidden_dims
+
+        self.fc1 = nn.Linear(self.input_dim + self.objective_dim, self.seq_len * self.hidden_dims[0])
+
+        self.bn1 = nn.BatchNorm1d(self.seq_len * self.hidden_dims[0])
+        self.deconv1 = nn.ConvTranspose1d(self.hidden_dims[0], self.hidden_dims[1], kernel_size=1, stride=1, bias=False)
+        self.act1 = nn.LeakyReLU()
+
+        self.bn2 = nn.BatchNorm1d(self.hidden_dims[1])
+        self.deconv2 = nn.ConvTranspose1d(self.hidden_dims[1], self.vocab_size, kernel_size=1, stride=1, bias=False)
+        self.act2 = nn.LeakyReLU()
+
+
+    def _init_weights(self, module):
+
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=1.0)
+            if module.bias is not None:
+                module.bias.data.zero_()
+
+        if isinstance(module, nn.ConvTranspose1d):
+            torch.nn.init.xavier_uniform(module.weight)
+
+
+    def forward(self, latent, objectives):
+
+        x = torch.cat([objectives,latent],dim=-1)
+
+        x = self.fc1(x)
+
+        x = self.bn1(x)
+
+        x = x.view(-1, self.hidden_dims[0], self.seq_len)
+
+        x = self.deconv1(x)
+        x = self.act1(x)
+
+        x = self.bn2(x)
+        x = self.deconv2(x)
+        out = self.act2(x)
 
         return out
 
@@ -65,11 +137,9 @@ class RNN_generator(nn.Module):
 #Define discriminator model
 
 class Discriminator(nn.Module):
-    def __init__(self, batch_size, seq_length, discriminator_layer_size, objective_dim, num_classes=20):
+    def __init__(self, seq_length, discriminator_layer_size, objective_dim, num_classes=20):
         """
         Parameters
-
-            batch_size (int): batch size of data
 
             seq_length (int): length of output AA sequences
 
@@ -83,10 +153,7 @@ class Discriminator(nn.Module):
 
         super(Discriminator, self).__init__()
 
-        self.batch_size = batch_size
         self.seq_length = seq_length
-
-        self.flatten = nn.Flatten()
 
         self.fc1 = nn.Linear(num_classes * seq_length + objective_dim * seq_length, discriminator_layer_size[0])
 
@@ -100,11 +167,22 @@ class Discriminator(nn.Module):
 
         self.sigmoid = nn.Sigmoid()
 
+        self.init_weights()
+
+    def init_weights(self):
+        for name, param in self.named_parameters():
+            if 'weight' in name:
+                nn.init.xavier_uniform_(param.data)
+            elif 'bias' in name:
+                nn.init.constant_(param.data, 0.01)
+
     def forward(self, seq, objectives):
 
-        x = torch.cat([seq,objectives],dim=-1)
+        x = torch.cat([seq,objectives],dim=1)
 
         x = x.view(x.size(0), -1)
+
+        x = x + (0.1**0.5)*torch.randn(x.size(0),x.size(1))
 
         x = self.fc1(x)
 
@@ -121,7 +199,7 @@ class Discriminator(nn.Module):
         return out
 
 
-#define the gradient locked sequence to vector model
+#define the frozen sequence to vector model
 #this model is a modified version of the ProteinUnet model by Kotowski et al
 #https://onlinelibrary.wiley.com/doi/full/10.1002/jcc.26432
 
@@ -140,15 +218,15 @@ class BasicBlock3(nn.Module):
 
         super(BasicBlock3,self).__init__()
 
-        self.conv1 = nn.Conv1d(input_size,layer_sizes[0], kernel_size=7, stride=1,padding=0)
+        self.conv1 = nn.Conv1d(input_size,layer_sizes[0], kernel_size=3, stride=1,padding=0)
 
         self.activation1 = nn.ReLU()
 
-        self.conv2 = nn.Conv1d(layer_sizes[0], layer_sizes[1], kernel_size=7, stride=1, padding=0)
+        self.conv2 = nn.Conv1d(layer_sizes[0], layer_sizes[1], kernel_size=3, stride=1, padding=0)
 
         self.activation2 = nn.ReLU()
 
-        self.conv3 = nn.Conv1d(layer_sizes[1], layer_sizes[2], kernel_size=7, stride=1, padding=0)
+        self.conv3 = nn.Conv1d(layer_sizes[1], layer_sizes[2], kernel_size=3, stride=1, padding=0)
 
         self.activation3 = nn.ReLU()
 
@@ -182,11 +260,11 @@ class BasicBlock2(nn.Module):
 
         super(BasicBlock2, self).__init__()
 
-        self.conv1 = nn.Conv1d(input_size,layer_sizes[0], kernel_size=7, stride=1, padding=0)
+        self.conv1 = nn.Conv1d(input_size,layer_sizes[0], kernel_size=3, stride=1, padding=0)
 
         self.activation1 = nn.ReLU()
 
-        self.conv2 = nn.Conv1d(layer_sizes[0], layer_sizes[1], kernel_size=7, stride=1, padding=0)
+        self.conv2 = nn.Conv1d(layer_sizes[0], layer_sizes[1], kernel_size=3, stride=1, padding=0)
 
         self.activation2 = nn.ReLU()
 
@@ -317,7 +395,7 @@ class SeqToSecondary(nn.Module):
 
         self.ups4 = nn.Upsample(scale_factor=2, mode='nearest')
 
-        self.fc1 = nn.Linear(7640,64)
+        self.fc1 = nn.Linear(2168,64)
 
         self.act1 = nn.ReLU()
 
@@ -407,4 +485,5 @@ class SeqToVecEnsemble(nn.Module):
 
         return sec, pol
     
-    
+##########################################################################################
+#create transformer-based networks

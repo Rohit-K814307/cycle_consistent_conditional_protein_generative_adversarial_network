@@ -1,4 +1,6 @@
 import os
+import torch
+import torch.nn.functional as F
 
 def mkdirs(paths):
     """create empty directories if they don't exist
@@ -44,3 +46,28 @@ def print_metrics(epoch, iter, scores,losses):
         print_string += f"{key}: {losses[key]}\n"
 
     print(print_string)
+
+
+def random_sample_protein(num_prot, latent_dim):
+
+    sec = F.softmax(torch.randn((num_prot, 8)), dim=-1)
+    pol = F.sigmoid(torch.randn((num_prot, 1)))
+
+    return torch.cat([sec,pol],dim=-1), torch.randn((num_prot, latent_dim))
+
+
+def process_outs(outs, map):
+    output = F.gumbel_softmax(outs,tau=1,hard=True)
+    
+    sequences = []
+
+    for sequence in output:
+        seq = ""
+        for residue in sequence:
+            seq += map[torch.argmax(residue,dim=-1).item()]
+
+        seq = seq.replace("-","")
+
+        sequences.append(seq)
+
+    return sequences

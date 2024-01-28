@@ -12,7 +12,14 @@ import os
 import py3Dmol
 from PIL import Image
 import matplotlib.pyplot as plt
-from io import BytesIO
+from pymol import cmd
+import numpy as np
+import requests
+from Bio.PDB import PDBParser
+import tempfile
+from Bio.PDB import PDBIO
+from io import StringIO
+import time
 
 def read_pdb_to_dataframe(pdb_path: Optional[str] = None, model_index: int = 1, parse_header: bool = True, ) -> pd.DataFrame:
     """
@@ -162,22 +169,64 @@ def jupy_viz_obj(pdb):
     view = py3Dmol.view(js='https://3dmol.org/build/3Dmol.js', width=800, height=400)
     view.addModel("".join(pdb), 'pdb')
     view.setStyle({'model': -1}, {"cartoon": {'color': 'spectrum'}})
-
-    return view
-
-        
-def view_to_plt(view):
-    image_data = view.toImage(format='png')
-    image = Image.open(BytesIO(image_data))
-
-    fig, ax = plt.subplots()
-    ax.imshow(image)
-    ax.axis('off')
-
-    return ax
+    view.zoomTo()
+    view.show()
 
 
+def esm_fold_api(data):
+    resp = requests.post("https://api.esmatlas.com/foldSequence/v1/pdb/", data=data, verify=False)
 
+    with tempfile.NamedTemporaryFile(mode='w+',suffix='.pdb') as tmp_pdb:
+
+        pdb_string = resp.content.decode('utf-8')
+
+        tmp_pdb.write(pdb_string)
+
+        tmp_pdb.seek(0)
+
+        parser = PDBParser(QUIET=True)
+
+        structure = parser.get_structure("struct", tmp_pdb.name)
+
+        tmp_pdb.close()
+
+    pdb_io = PDBIO()
+    pdb_string_out = StringIO()
+    pdb_io.set_structure(structure)
+    pdb_io.save(pdb_string_out)
+
+    return pdb_string_out.getvalue()
+
+
+def esm_predict_api_batch(sequences):
+    pdbs = []
+
+    for sequence in sequences:
+        pdbs.append(esm_fold_api(sequence))
+        time.sleep(0.5)
+
+    return pdbs
+
+
+def viz_protein_seq(pdbstr):
+
+    cmd.read_pdbstr(pdbstr, "my_protein")
+    cmd.spectrum('count', 'rainbow')
+    cmd.center('all')
+    cmd.set('depth_cue', 0)
+    cmd.set('ray_trace_mode', 0)
+    cmd.set('antialias', 2)
+    cmd.hide("nonbonded")
+
+
+    with tempfile.NamedTemporaryFile(suffix=".png") as temp_file:
+
+        cmd.png(temp_file.name, width=1600, height=1200, dpi=2000)
+
+        pil_image = Image.open(temp_file.name)
+
+        temp_file.close()
+    return pil_image
 
 
 if __name__ == "__main__":

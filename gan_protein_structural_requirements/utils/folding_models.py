@@ -4,6 +4,7 @@ from transformers.models.esm.openfold_utils.protein import to_pdb, Protein as OF
 from transformers.models.esm.openfold_utils.feats import atom14_to_atom37
 import os
 import numpy as np
+import requests
 
 def convert_outputs_to_pdb(outputs):
     final_atom_positions = atom14_to_atom37(outputs["positions"][-1], outputs)
@@ -67,5 +68,7 @@ def get_vocab_encodings():
         for _ in range(21):
             line = file.readline().strip()
             arr.append(line[0])
+
+    arr.append("-") #add padd encoding
     
     return arr

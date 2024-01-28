@@ -1,14 +1,14 @@
-import gan_protein_structural_requirements.models as models
 import gan_protein_structural_requirements.models.metrics as m
+import gan_protein_structural_requirements.utils.protein_visualizer as viz
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import matplotlib
-import os
-import numpy as np, numpy.random
+import matplotlib.pyplot as plt
+import numpy as np
 import random
+import textwrap
 
-def test_seqtovec(test_dataset, model, model_save_path):
+def test_seqtovec(test_dataset, model, model_save_path=None):
     """
     Parameters
         
@@ -19,8 +19,9 @@ def test_seqtovec(test_dataset, model, model_save_path):
         model_save_path: save path of trained model
         
     """
-
-    model.load_state_dict(torch.load(model_save_path))
+    
+    if model_save_path is not None:
+        model.load_state_dict(torch.load(model_save_path))
 
     model.eval()
 
@@ -99,7 +100,7 @@ def set_data(input_batch, max_prot_len):
         input_batch (list): list of dictionaries in c8 DSSP + polarity format 
             with values of proportions
             dictionary keys:
-                - "a_helix"
+                - "a-helix"
                 - "beta-bridge"
                 - "strand"
                 - "3-10-helix"
@@ -113,10 +114,10 @@ def set_data(input_batch, max_prot_len):
                 
     """
 
-    data = [[c["a_helix"], c["beta-bridge"], c["strand"], 
+    data = [[c["a-helix"], c["beta-bridge"], c["strand"], 
             c["3-10-helix"], c["pi-helix"], c["turn"],
             c["bend"], c["none"], c["pol"]] for c in input_batch]
-    data = torch.tensor(data).unsqueeze(1).repeat(1,max_prot_len,1)
+    data = torch.tensor(data).unsqueeze(1).repeat(1,max_prot_len,1).float()
 
     return data
 
@@ -161,7 +162,8 @@ def get_metrics_rand(model, num_proteins, map, max_prot_len, latent_dim):
     data = create_rand_inputs(num_proteins,max_prot_len)
 
     latent_input = torch.randn(data.size(0), max_prot_len, latent_dim)
-    outs = model(latent_input, data)
+    with torch.no_grad():
+        outs = model(latent_input, data)
     sequences = process_outs(outs, map)
 
     return {
@@ -205,5 +207,46 @@ def get_metrics_dtst(model, X, y, cos_eps, max_prot_len, latent_dim):
         return metrics
     
 
-def comput_pdb_from_sequences(sequences):
-    pass
+def create_captioned_image(pdb, objectives):
+    image = viz.viz_protein_seq(pdb)
+
+    caption = ""
+    for objective in objectives:
+        caption += str(objective) + ", "
+    caption = "[" + caption[0:len(caption)-1] + "]"
+
+    wrapped_caption = textwrap.fill(caption, width=70) 
+
+    fig, ax = plt.subplots()
+    ax.imshow(np.array(image))
+    ax.set_title(wrapped_caption,fontdict={'fontsize':12,'horizontalalignment':'center'})
+    ax.axis('off')
+    
+    return fig
+
+
+def ccc_progan_eval(model, dataset, cos_eps, max_prot_len, latent_dim, num_proteins):
+
+    print("|----------------------EVALUATION---------------------------|")
+    #get metrics data
+    metrics_test_data = get_metrics_dtst(model, dataset.X, dataset.Y, cos_eps, max_prot_len, latent_dim)
+    metrics_random_data = get_metrics_rand(model, num_proteins, dataset.decode_cats, max_prot_len, latent_dim)
+
+    #get visual data from random proteins
+    pdbs = viz.esm_predict_api_batch(metrics_random_data["Sequences"])
+
+    images = []
+    #create matplotlib image graphs with objectives as captions
+    for i in range(len(pdbs)):
+        images.append(create_captioned_image(pdbs[i], metrics_random_data["Design Objectives"][i]))
+    
+    print("|-------------------Test Dataset Metrics--------------------|")
+    for key in metrics_test_data.keys:
+        print(str(key) + ": " + str(metrics_test_data[key]))
+    
+    print("|-------------------Random Input Metrics--------------------|")
+    for key in metrics_random_data.keys:
+        if key != "Sequence":
+            print(str(key) + ": " + str(metrics_random_data[key]))
+
+    return metrics_test_data, metrics_random_data, images

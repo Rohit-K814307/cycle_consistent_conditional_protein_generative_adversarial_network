@@ -46,13 +46,14 @@ class Eval_Protein_dataset(Dataset):
     def pad_label(self, sequence, maxlen):
         for _ in range(maxlen - len(sequence)):
             t = [0] * len(sequence[0])
+            t[-1] = 1
             sequence.append(t)
 
         return sequence
 
     def onehot_encode(self, labels):
         categories = fold.get_vocab_encodings()
-        cat_dict = {categories[i] : i for i in range(len(categories)) if categories[i] != "X"}
+        cat_dict = {categories[i] : i for i in range(len(categories))}
         decode_dict = {cat_dict[key] : key for key in cat_dict.keys()}
         encoded_data = []
 
@@ -61,10 +62,8 @@ class Eval_Protein_dataset(Dataset):
 
             for value in example:
                 encoded_val = [0] * int(len(cat_dict.keys()))
-                if value != "X":
-                    encoded_val[cat_dict.get(value)] = 1
-                else:
-                    pass
+                encoded_val[cat_dict.get(value)] = 1
+
                 datapoint.append(encoded_val)
 
             datapoint = self.pad_label(datapoint, self.max_prot_len)
@@ -88,4 +87,3 @@ class Eval_Protein_dataset(Dataset):
                 self.ids.append(id)
 
         return features, labels
-    

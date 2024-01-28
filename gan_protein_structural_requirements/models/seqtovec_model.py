@@ -41,12 +41,20 @@ class SeqToVecModel(nn.Module):
         self.pol_loss = nn.MSELoss()
 
         self.net = networks.SeqToVecEnsemble(input_size, sequence_length)
+        self.net.apply(self.init_weights)
 
         self.optim = torch.optim.Adam(self.net.parameters(),lr=lr, betas=(lr_beta, 0.999), eps=epsilon, weight_decay=0)
 
         self.optimizers = [self.optim]
 
-        
+    
+    def init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            torch.nn.init.xavier_uniform(module.weight)
+            module.bias.data.fill_(0.01)
+        if isinstance(module, nn.RNN):
+            module.weight.data.normal_(mean=0.0,std=1.0)
+
     def set_input(self, input):
         """Unpack input data and perform data allocation steps
 
