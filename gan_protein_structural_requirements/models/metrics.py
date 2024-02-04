@@ -55,14 +55,17 @@ def rmsd(pdb1, pdb2):
 
 def avg_rmsd(pdbs1, pdbs2):
     summed_rmsd = 0
+    rmsd_arr = []
 
     for i in range(len(pdbs1)):
         pdba = pdbs1[i]
         pdbb = pdbs2[i]
+        
+        score = rmsd(pdba, pdbb)
+        summed_rmsd += score
+        rmsd_arr.append(score)
 
-        summed_rmsd += rmsd(pdba, pdbb)
-
-    return summed_rmsd / len(pdbs1)
+    return summed_rmsd / len(pdbs1), rmsd_arr
 
     
 

@@ -9,8 +9,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import textwrap
+import json
 
-def test_seqtovec(test_dataset, model, model_save_path=None):
+def test_seqtovec(test_dataset, model, model_save_path=None, json_save_dir=None):
     """
     Parameters
         
@@ -73,16 +74,24 @@ def test_seqtovec(test_dataset, model, model_save_path=None):
 
         print(f"Polarity Loss: {mse_pol}")
 
-    return {"Total Loss": loss,
-            "Alpha Helix Loss": mse_ahelix,
-            "Beta Bridge Loss": mse_betabridge,
-            "Strand Loss": mse_strand,
-            "3-10 Helix Loss": mse_310helix,
-            "Pi Helix Loss": mse_pi,
-            "Turn Loss": mse_turn,
-            "Bend Loss":mse_bend,
-            "None Loss":mse_none,
-            "Polarity Loss":mse_pol}
+    out_json = {"Total Loss": loss.item(),
+            "Alpha Helix Loss": mse_ahelix.item(),
+            "Beta Bridge Loss": mse_betabridge.item(),
+            "Strand Loss": mse_strand.item(),
+            "3-10 Helix Loss": mse_310helix.item(),
+            "Pi Helix Loss": mse_pi.item(),
+            "Turn Loss": mse_turn.item(),
+            "Bend Loss":mse_bend.item(),
+            "None Loss":mse_none.item(),
+            "Polarity Loss":mse_pol.item()}
+    
+    if json_save_dir is not None:
+        os.makedirs(json_save_dir, exist_ok=True)
+
+        with open(f"{json_save_dir}/metrics.json", "w") as outfile:
+            json.dump(out_json, outfile)
+    else:
+        return out_json
 
 ########################################################################################
 #protein generation model evaluation and testing code
@@ -165,13 +174,20 @@ def get_metrics_dtst(model, path_to_r, X, y, max_prot_len, latent_dim, vocab_siz
     pdbs_hat = viz.esm_predict_api_batch(sequences_pred)
     pdbs_labels = viz.esm_predict_api_batch(sequences_labels)
 
+    rmsd, scores = m.avg_rmsd(pdbs_hat, pdbs_labels)
+
     metrics = {
         "Sequence Loss": seq_loss,
         "Objective Loss": obj_loss,
-        "Average RMSD": m.avg_rmsd(pdbs_hat, pdbs_labels),
+        "Average RMSD": rmsd,
         "Predicted Sequences": sequences_pred,
-        "Label Sequences": sequences_labels
-        }
+        "Label Sequences": sequences_labels,
+        "Label PDBS": pdbs_labels,
+        "Predicted PDBS": pdbs_hat,
+        "Label Objectives": X[0:15,0,:].numpy(),
+        "Predicted Objectives": x_hat[0:15].numpy(),
+        "Prot RMSDs": scores
+    }
 
     return metrics
     
@@ -207,16 +223,33 @@ def evaluate_generator(path_to_G, instance_G, path_to_R, dataset, max_prot_len, 
     #get visual data from random proteins
     pdbs = metrics_random_data["PDBS"]
 
-    images = []
-    #create matplotlib image graphs with objectives as captions
+    images_rand = []
+    #create matplotlib image graphs with objectives as captions for random dataset
     for i in range(len(pdbs)):
-        images.append(create_captioned_image(pdbs[i], metrics_random_data["Design Objectives"][i]))
+        images_rand.append(create_captioned_image(pdbs[i], metrics_random_data["Design Objectives"][i]))
     
+    #create matplotlib image graphs with objectives as captions for predicted and label pdbs and objectives
+    images_pred_test_data = []
+    for i in range(len(metrics_test_data["Predicted PDBS"])):
+        images_pred_test_data.append(
+            create_captioned_image(metrics_test_data["Predicted PDBS"][i],
+                                   metrics_test_data["Predicted Objectives"][i]
+            )
+        )
+
+    images_label_test_data = []
+    for i in range(len(metrics_test_data["Label PDBS"])):
+        images_label_test_data.append(
+            create_captioned_image(metrics_test_data["Label PDBS"][i],
+                                   metrics_test_data["Label Objectives"][i]
+            )
+        )
+
     print()
     print()
     print("|-------------------Test Dataset Metrics--------------------|")
     for key in metrics_test_data.keys():
-        if key != "Predicted Sequences" and key != "Label Sequences":
+        if key != "Predicted Sequences" and key != "Label Sequences" and key != "Label PDBS" and key != "Predicted PDBS" and key != "Label Objectives" and key != "Predicted Objectives" and key != "Prot RMSDs":
             print(str(key) + ": " + str(metrics_test_data[key]))
             print()
     print()
@@ -231,14 +264,37 @@ def evaluate_generator(path_to_G, instance_G, path_to_R, dataset, max_prot_len, 
     if results_save_root_dir is not None:
         print(f"|--------------Saving results to {results_save_root_dir}---------------|")
 
+        #save predicted and label dirs with images 
         image_dir = os.path.join(results_save_root_dir,"images")
         os.makedirs(image_dir,exist_ok=True)
 
-        image_paths = [os.path.join(image_dir, f"image_{i}.png") for i in range(len(images))]
-            
-        for i in range(len(images)):
-            images[i].savefig(image_paths[i],transparent=True,format="png")
+        image_paths_rand = [os.path.join(image_dir, "random", f"image_{i}.png") for i in range(len(images_rand))]
+        image_paths_test_labels = [os.path.join(image_dir, "test", "label" , f"image_{i}.png") for i in range(len(images_label_test_data))]
+        image_paths_test_preds = [os.path.join(image_dir, "test", "pred" , f"image_{i}.png") for i in range(len(images_pred_test_data))]
+        
+        metrics_random_data["Image Paths"] = image_paths_rand
+        metrics_test_data["Label Image Paths"] = image_paths_test_labels
+        metrics_test_data["Pred Image Paths"] = image_paths_test_preds
 
+        os.makedirs(os.path.join(image_dir, "random"), exist_ok=True)
+        os.makedirs(os.path.join(image_dir, "test", "label"), exist_ok=True)
+        os.makedirs(os.path.join(image_dir, "test", "pred"), exist_ok=True)
+
+        for i in range(len(images_rand)):
+            images_rand[i].savefig(image_paths_rand[i],transparent=True,format="png")
+
+
+        for i in range(len(image_paths_test_labels)):
+            images_label_test_data[i].savefig(image_paths_test_labels[i], transparent=True, format="png")
+        
+        for i in range(len(image_paths_test_preds)):
+            images_pred_test_data[i].savefig(image_paths_test_preds[i], transparent=True, format="png")
+
+
+
+
+        #for blasting results
+        
         string_list = metrics_random_data["Sequences"]
         max_strings_per_file=5
         file_counter=1
@@ -256,4 +312,16 @@ def evaluate_generator(path_to_G, instance_G, path_to_R, dataset, max_prot_len, 
 
         print("BLAST SEQUENCES FOR SCORES through https://www.uniprot.org/blast")
 
-    return metrics_test_data, metrics_random_data, images
+    metrics_test_data["Label Objectives"] = metrics_test_data["Label Objectives"].tolist()
+    metrics_test_data["Predicted Objectives"] = metrics_test_data["Predicted Objectives"].tolist()
+    metrics_random_data["Design Objectives"] = metrics_random_data["Design Objectives"].tolist()
+
+    if results_save_root_dir is not None:
+        json_save_dict = {"Test Data Metrics": metrics_test_data,
+                          "Random Data Metrics": metrics_random_data}
+        
+        with open(f"{results_save_root_dir}/results.json", "w") as outfile:
+            json.dump(json_save_dict, outfile)
+
+    else:
+        return metrics_test_data, metrics_random_data, images_label_test_data, images_pred_test_data, images_rand
