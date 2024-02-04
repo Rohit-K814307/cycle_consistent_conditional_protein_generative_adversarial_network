@@ -1,4 +1,3 @@
-import plotly.express as px
 import pandas as pd
 from biopandas.pdb import PandasPdb
 from graphein.protein.graphs import label_node_id
@@ -11,15 +10,15 @@ from typing import Optional
 import os
 import py3Dmol
 from PIL import Image
-import matplotlib.pyplot as plt
 from pymol import cmd
-import numpy as np
+import pymol
 import requests
 from Bio.PDB import PDBParser
 import tempfile
 from Bio.PDB import PDBIO
 from io import StringIO
 import time
+import warnings
 
 def read_pdb_to_dataframe(pdb_path: Optional[str] = None, model_index: int = 1, parse_header: bool = True, ) -> pd.DataFrame:
     """
@@ -199,6 +198,9 @@ def esm_fold_api(data):
 
 
 def esm_predict_api_batch(sequences):
+    
+    warnings.filterwarnings('ignore')
+
     pdbs = []
 
     for sequence in sequences:
@@ -211,7 +213,7 @@ def esm_predict_api_batch(sequences):
 def viz_protein_seq(pdbstr):
 
     cmd.read_pdbstr(pdbstr, "my_protein")
-    cmd.spectrum('count', 'rainbow')
+    cmd.spectrum('b','blue_red')
     cmd.center('all')
     cmd.set('depth_cue', 0)
     cmd.set('ray_trace_mode', 0)
@@ -219,13 +221,18 @@ def viz_protein_seq(pdbstr):
     cmd.hide("nonbonded")
 
 
+
+
     with tempfile.NamedTemporaryFile(suffix=".png") as temp_file:
 
-        cmd.png(temp_file.name, width=1600, height=1200, dpi=2000)
+        cmd.png(temp_file.name, width=1600, height=1200, dpi=4000)
 
         pil_image = Image.open(temp_file.name)
 
         temp_file.close()
+
+    cmd.delete("my_protein")
+    
     return pil_image
 
 

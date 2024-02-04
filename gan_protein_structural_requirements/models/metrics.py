@@ -1,52 +1,70 @@
-import torch
-from io import StringIO
 from Bio.PDB import PDBParser
-import numpy as np
 from Bio.SVDSuperimposer import SVDSuperimposer
-
+import numpy as np
+from io import StringIO
+import torch
 
 def rmsd(pdb1, pdb2):
+    # Parse the PDB strings
     parser = PDBParser(QUIET=True)
-    structure1 = parser.get_structure("prot", StringIO(pdb1))
-    structure2 = parser.get_structure("prot", StringIO(pdb2))
+    structure1 = parser.get_structure('1', StringIO(pdb1))
+    structure2 = parser.get_structure('2', StringIO(pdb2))
 
+    # Extract the coordinates of the atoms
+    coords1 = []
+    coords2 = []
 
-    atoms1 = []
-    atoms2 = []
-    for model1, model2 in zip(structure1, structure2):
-        for chain1, chain2 in zip(model1, model2):
-            for residue1, residue2 in zip(chain1, chain2):
-                for atom1, atom2 in zip(residue1, residue2):
-                    if atom1.get_id() == atom2.get_id():
-                        atoms1.append(atom1.coord)
-                        atoms2.append(atom2.coord)
+    for model in structure1:
+        for chain in model:
+            for residue in chain:
+                for atom in residue:
+                    coords1.append(atom.get_coord())
 
+    for model in structure2:
+        for chain in model:
+            for residue in chain:
+                for atom in residue:
+                    coords2.append(atom.get_coord())
 
+    # Create a SVDSuperimposer object
     superimposer = SVDSuperimposer()
 
-    atoms1 = np.array(atoms1)
-    atoms2 = np.array(atoms2)
+    coords1 = np.array(coords1)
+    coords2 = np.array(coords2)
 
-    superimposer.set(atoms1, atoms2)
+    if len(coords1) < len(coords2):
+        coords1 = coords1[0:len(coords1)]
+        coords2 = coords2[0:len(coords1)]
+    else:
+        coords1 = coords1[0:len(coords2)]
+        coords2 = coords2[0:len(coords2)]
+
+
+    # Set the coordinates to be superimposed
+    superimposer.set(coords1, coords2)
+
+    # Perform the superimposition
     superimposer.run()
 
+    # Get the RMSD value
     rmsd = superimposer.get_rms()
 
     return rmsd
 
 
-def pairwise_avg_rmsd(pdbs):
 
+def avg_rmsd(pdbs1, pdbs2):
     summed_rmsd = 0
-    pairwise_comps = 0
 
-    for j in range(len(pdbs)):
-        for k in range(j+1, len(pdbs)):
+    for i in range(len(pdbs1)):
+        pdba = pdbs1[i]
+        pdbb = pdbs2[i]
 
-            summed_rmsd += rmsd(pdbs[j], pdbs[k])
-            pairwise_comps += 1
+        summed_rmsd += rmsd(pdba, pdbb)
 
-    return summed_rmsd / pairwise_comps
+    return summed_rmsd / len(pdbs1)
+
+    
 
 
 def seq_feasibility(preds, actuals):

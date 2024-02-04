@@ -4,3 +4,4 @@ gan_protein_structural_requirements/data/raw
 gan_protein_structural_requirements/data/save
 gan_protein_structural_requirements/utils/esmfoldv1/
 checkpoints
+gan_protein_structural_requirements/results

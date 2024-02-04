@@ -122,7 +122,7 @@ def dssp_pdb(pdb_batch):
     """
     Arguments:
     
-        pdb_batch (list): batch of pdb object outputs from folding_models.esm_batch_predict()
+        pdb_batch (list): batch of pdb object outputs from esm prediction
     """
     out = []
     p = PDBParser(QUIET=True)

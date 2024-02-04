@@ -56,8 +56,11 @@ def random_sample_protein(num_prot, latent_dim):
     return torch.cat([sec,pol],dim=-1), torch.randn((num_prot, latent_dim))
 
 
-def process_outs(outs, map):
-    output = F.gumbel_softmax(outs,tau=1,hard=True)
+def process_outs(outs, map, gumbel=True):
+    if gumbel:
+        output = F.gumbel_softmax(outs,tau=1,hard=True)
+    else:
+        output = outs
     
     sequences = []
 

@@ -1,11 +1,13 @@
 import gan_protein_structural_requirements.models.metrics as m
+from gan_protein_structural_requirements.models import random_sample_protein, process_outs
 import gan_protein_structural_requirements.utils.protein_visualizer as viz
+from gan_protein_structural_requirements.models.networks import SeqToVecEnsemble
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
-import random
+import os
 import textwrap
 
 def test_seqtovec(test_dataset, model, model_save_path=None):
@@ -92,89 +94,37 @@ def load_generator(model, save_path):
     return model
 
 
-#define function for cleaning and setting data for input to generator and regular inference
-def set_data(input_batch, max_prot_len):
-    """
-    Parameters:
-    
-        input_batch (list): list of dictionaries in c8 DSSP + polarity format 
-            with values of proportions
-            dictionary keys:
-                - "a-helix"
-                - "beta-bridge"
-                - "strand"
-                - "3-10-helix"
-                - "pi-helix"
-                - "turn"
-                - "bend"
-                - "none"
-                - "pol"
-
-        max_prot_len
-                
-    """
-
-    data = [[c["a-helix"], c["beta-bridge"], c["strand"], 
-            c["3-10-helix"], c["pi-helix"], c["turn"],
-            c["bend"], c["none"], c["pol"]] for c in input_batch]
-    data = torch.tensor(data).unsqueeze(1).repeat(1,max_prot_len,1).float()
-
-    return data
-
-
-#create random input dataset of conditions and return full dataset
-def create_rand_inputs(size, max_prot_len):
-
-    data = []
-    for _ in range(size):
-
-        random_c8 = np.random.dirichlet(np.ones(8),size=1)[0]
-
-        data.append({"a-helix":random_c8[0], "beta-bridge":random_c8[1], 
-                      "strand":random_c8[2], "3-10-helix":random_c8[3], 
-                      "pi-helix":random_c8[4], "turn":random_c8[5],
-                      "bend":random_c8[6], "none":random_c8[7], 
-                      "pol":random.randint(0,1)})
-        
-    return set_data(data, max_prot_len)
-
-
-#define method to process outputs of model into onehot vectors
-# and into string-based sequences of amino acids
-def process_outs(outs, map):
-    output = F.gumbel_softmax(outs,tau=1,hard=True)
-    
-    sequences = []
-
-    for sequence in output:
-        seq = ""
-        for residue in sequence:
-            seq += map[torch.argmax(residue,dim=-1).item()]
-
-        sequences.append(seq)
-
-    return sequences
-
-
 #randomly generate num_proteins proteins and get diversity of outputs and sequences
-def get_metrics_rand(model, num_proteins, map, max_prot_len, latent_dim):
-    
-    data = create_rand_inputs(num_proteins,max_prot_len)
+def get_metrics_rand(model, path_to_r, num_proteins, map, max_prot_len, latent_dim, vocab_size):
 
-    latent_input = torch.randn(data.size(0), max_prot_len, latent_dim)
     with torch.no_grad():
+
+        model_r = SeqToVecEnsemble(vocab_size, max_prot_len)
+        model_r.load_state_dict(torch.load(path_to_r))
+        model_r.eval()
+        
+        data, latent_input = random_sample_protein(num_proteins, latent_dim)
+        
         outs = model(latent_input, data)
-    sequences = process_outs(outs, map)
+        onehot = F.gumbel_softmax(outs, tau=1, hard=True)
+        sec, pol= model_r(onehot)
+        x_hat = torch.cat([sec, pol], dim=-1)
+        obj_loss_fn = nn.MSELoss()
+
+    sequences = process_outs(outs.permute(0,2,1), map)
+
+    pdbs = viz.esm_predict_api_batch(sequences)
 
     return {
-        "Design Objectives":data[:,0,:].numpy(),
-        "Sequences":sequences,
-        "Diversity":m.seq_diversity(F.gumbel_softmax(outs, tau=1,hard=True))
+        "PDBS":pdbs,
+        "Design Objectives":data.numpy(),
+        "Objective Loss":obj_loss_fn(x_hat, data).item(), 
+        "Sequences":sequences
     }
 
 
 #get metrics for one dataset of processed x and processed y
-def get_metrics_dtst(model, X, y, cos_eps, max_prot_len, latent_dim):
+def get_metrics_dtst(model, path_to_r, X, y, max_prot_len, latent_dim, vocab_size, map):
     """
     Parameters:
     
@@ -194,17 +144,36 @@ def get_metrics_dtst(model, X, y, cos_eps, max_prot_len, latent_dim):
 
     with torch.no_grad():
 
-        latent_input = torch.randn(X.size(0), max_prot_len, latent_dim)
-        onehot = F.gumbel_softmax(model(latent_input, X),tau=1,hard=True)
-        seq_loss_fn = nn.CosineSimilarity(dim=-1,eps=cos_eps)
+        latent_input = torch.randn(X.size(0), latent_dim)
+        out = model(latent_input, X[:,0,:])
+        onehot = F.gumbel_softmax(out,tau=1,hard=True)
+        seq_loss_fn = nn.CrossEntropyLoss(ignore_index=21)
 
+        model_r = SeqToVecEnsemble(vocab_size, max_prot_len)
+        model_r.eval()
+        model_r.load_state_dict(torch.load(path_to_r))
+        sec, pol= model_r(onehot)
+        x_hat = torch.cat([sec, pol], dim=-1)
+        obj_loss_fn = nn.MSELoss()
 
+        seq_loss = seq_loss_fn(out, torch.argmax(y.float(),dim=-1)).item()
+        obj_loss = obj_loss_fn(x_hat, X[:,0,:].float()).item()
 
-        metrics = {"avg_accuracy":m.seq_feasibility(onehot,y),
-                   "avg_diversity":m.seq_diversity(onehot),
-                   "avg_cos_similarity":seq_loss_fn(onehot, y)}
+    sequences_pred = process_outs(out.permute(0,2,1), map)[0:15]
+    sequences_labels = process_outs(y, map, gumbel=False)[0:15]
 
-        return metrics
+    pdbs_hat = viz.esm_predict_api_batch(sequences_pred)
+    pdbs_labels = viz.esm_predict_api_batch(sequences_labels)
+
+    metrics = {
+        "Sequence Loss": seq_loss,
+        "Objective Loss": obj_loss,
+        "Average RMSD": m.avg_rmsd(pdbs_hat, pdbs_labels),
+        "Predicted Sequences": sequences_pred,
+        "Label Sequences": sequences_labels
+        }
+
+    return metrics
     
 
 def create_captioned_image(pdb, objectives):
@@ -221,32 +190,70 @@ def create_captioned_image(pdb, objectives):
     ax.imshow(np.array(image))
     ax.set_title(wrapped_caption,fontdict={'fontsize':12,'horizontalalignment':'center'})
     ax.axis('off')
+    plt.close()
     
     return fig
 
 
-def ccc_progan_eval(model, dataset, cos_eps, max_prot_len, latent_dim, num_proteins):
+def evaluate_generator(path_to_G, instance_G, path_to_R, dataset, max_prot_len, latent_dim, vocab_size, num_proteins, results_save_root_dir=None):
 
     print("|----------------------EVALUATION---------------------------|")
+    model_g = load_generator(instance_G,path_to_G)
+
     #get metrics data
-    metrics_test_data = get_metrics_dtst(model, dataset.X, dataset.Y, cos_eps, max_prot_len, latent_dim)
-    metrics_random_data = get_metrics_rand(model, num_proteins, dataset.decode_cats, max_prot_len, latent_dim)
+    metrics_test_data = get_metrics_dtst(model_g, path_to_R, dataset.X, dataset.Y, max_prot_len, latent_dim, vocab_size, dataset.decode_cats)
+    metrics_random_data = get_metrics_rand(model_g, path_to_R, num_proteins, dataset.decode_cats, max_prot_len, latent_dim, vocab_size)
 
     #get visual data from random proteins
-    pdbs = viz.esm_predict_api_batch(metrics_random_data["Sequences"])
+    pdbs = metrics_random_data["PDBS"]
 
     images = []
     #create matplotlib image graphs with objectives as captions
     for i in range(len(pdbs)):
         images.append(create_captioned_image(pdbs[i], metrics_random_data["Design Objectives"][i]))
     
+    print()
+    print()
     print("|-------------------Test Dataset Metrics--------------------|")
-    for key in metrics_test_data.keys:
-        print(str(key) + ": " + str(metrics_test_data[key]))
+    for key in metrics_test_data.keys():
+        if key != "Predicted Sequences" and key != "Label Sequences":
+            print(str(key) + ": " + str(metrics_test_data[key]))
+            print()
+    print()
+    print()
     
     print("|-------------------Random Input Metrics--------------------|")
-    for key in metrics_random_data.keys:
-        if key != "Sequence":
+    for key in metrics_random_data.keys():
+        if key != "Sequences" and key != "PDBS" and key != "Design Objectives":
             print(str(key) + ": " + str(metrics_random_data[key]))
+            print()
+
+    if results_save_root_dir is not None:
+        print(f"|--------------Saving results to {results_save_root_dir}---------------|")
+
+        image_dir = os.path.join(results_save_root_dir,"images")
+        os.makedirs(image_dir,exist_ok=True)
+
+        image_paths = [os.path.join(image_dir, f"image_{i}.png") for i in range(len(images))]
+            
+        for i in range(len(images)):
+            images[i].savefig(image_paths[i],transparent=True,format="png")
+
+        string_list = metrics_random_data["Sequences"]
+        max_strings_per_file=5
+        file_counter=1
+
+
+        for i in range(0, len(string_list), max_strings_per_file):
+
+            with open(os.path.join(results_save_root_dir,f'output_{file_counter}.txt'), 'w') as file:
+
+                for string in string_list[i:i+max_strings_per_file]:
+                    file.write(">\n")
+                    file.write(f"{string}\n")
+
+            file_counter += 1
+
+        print("BLAST SEQUENCES FOR SCORES through https://www.uniprot.org/blast")
 
     return metrics_test_data, metrics_random_data, images
