@@ -8,7 +8,7 @@ import torch.nn as nn
 
 
 class SeqToVecModel(nn.Module):
-    def __init__(self, input_size, sequence_length, lr, lr_beta, epsilon):
+    def __init__(self, input_size, sequence_length, lr, lr_beta, epsilon, lambda_loss):
         """Initialize SeqToVec Model
         
         Parameters:
@@ -46,6 +46,8 @@ class SeqToVecModel(nn.Module):
         self.optim = torch.optim.Adam(self.net.parameters(),lr=lr, betas=(lr_beta, 0.999), eps=epsilon, weight_decay=0)
 
         self.optimizers = [self.optim]
+
+        self.lambda_loss = lambda_loss
 
     
     def init_weights(self, module):
@@ -101,7 +103,7 @@ class SeqToVecModel(nn.Module):
         #find loss of the network
         self.loss_sec = self.sec_loss(self.sec, self.y_sec)
         self.loss_pol = self.pol_loss(self.pol, self.y_pol)
-        self.loss_net = self.loss_sec + self.loss_pol
+        self.loss_net = (self.loss_sec + self.loss_pol) * self.lambda_loss
 
         #send loss backward to compute gradients
         self.loss_net.backward()

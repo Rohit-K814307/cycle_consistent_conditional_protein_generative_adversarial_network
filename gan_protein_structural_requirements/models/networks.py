@@ -657,6 +657,8 @@ class PolarityRegressor(nn.Module):
 
         self.fc2 = nn.Linear(hidden_size, 1)
 
+        self.sigmoid = nn.Sigmoid()
+
     def forward(self, x):
 
         x = self.flatten(x) 
@@ -665,7 +667,9 @@ class PolarityRegressor(nn.Module):
 
         x = self.relu(x)
 
-        out = self.fc2(x)
+        x = self.fc2(x)
+
+        out = self.sigmoid(x)
 
         return out
 
@@ -756,6 +760,8 @@ class SeqToSecondary(nn.Module):
 
         self.fc3 = PercentageRegressor(576,8)
 
+        self.act3 = nn.Sigmoid()
+
     def forward(self, x):
 
         #compute operations for contracting path
@@ -806,7 +812,9 @@ class SeqToSecondary(nn.Module):
 
         x1 = self.act2(x1)
 
-        out = self.fc3(x1)
+        x1 = self.fc3(x1)
+
+        out = self.act3(x1)
 
         return out
     
