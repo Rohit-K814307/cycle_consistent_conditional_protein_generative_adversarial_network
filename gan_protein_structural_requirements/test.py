@@ -168,11 +168,11 @@ def get_metrics_dtst(model, path_to_r, X, y, max_prot_len, latent_dim, vocab_siz
         seq_loss = seq_loss_fn(out, torch.argmax(y.float(),dim=-1)).item()
         obj_loss = obj_loss_fn(x_hat, X[:,0,:].float()).item()
 
-    sequences_pred = process_outs(out.permute(0,2,1), map)[0:15]
-    sequences_labels = process_outs(y, map, gumbel=False)[0:15]
+    sequences_pred = process_outs(out.permute(0,2,1), map)
+    sequences_labels = process_outs(y, map, gumbel=False)
 
-    pdbs_hat = viz.esm_predict_api_batch(sequences_pred)
-    pdbs_labels = viz.esm_predict_api_batch(sequences_labels)
+    pdbs_hat = viz.esm_predict_api_batch(sequences_pred[0:15])
+    pdbs_labels = viz.esm_predict_api_batch(sequences_labels[0:15])
 
     rmsd, scores = m.avg_rmsd(pdbs_hat, pdbs_labels)
 
@@ -184,8 +184,8 @@ def get_metrics_dtst(model, path_to_r, X, y, max_prot_len, latent_dim, vocab_siz
         "Label Sequences": sequences_labels,
         "Label PDBS": pdbs_labels,
         "Predicted PDBS": pdbs_hat,
-        "Label Objectives": X[0:15,0,:].numpy(),
-        "Predicted Objectives": x_hat[0:15].numpy(),
+        "Label Objectives": X[:,0,:].numpy(),
+        "Predicted Objectives": x_hat.numpy(),
         "Prot RMSDs": scores
     }
 

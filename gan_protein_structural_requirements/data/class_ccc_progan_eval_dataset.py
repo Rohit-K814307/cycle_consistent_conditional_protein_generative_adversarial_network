@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset
+import os
 from gan_protein_structural_requirements.utils import extract_structure as struct
 from gan_protein_structural_requirements.utils import folding_models as fold
 
@@ -61,14 +62,17 @@ class Eval_Protein_dataset(Dataset):
             datapoint = []
 
             for value in example:
-                encoded_val = [0] * int(len(cat_dict.keys()))
-                encoded_val[cat_dict.get(value)] = 1
+                
+                if value != "X":
+                    encoded_val = [0] * int(len(cat_dict.keys()))
+                    encoded_val[cat_dict.get(value)] = 1
 
-                datapoint.append(encoded_val)
+                    datapoint.append(encoded_val)
 
             datapoint = self.pad_label(datapoint, self.max_prot_len)
             encoded_data.append(datapoint)
         return torch.tensor(encoded_data), cat_dict, decode_dict
+
 
     def aggregate_data(self):
         structures = struct.extract_structures(self.root_dir)
@@ -87,3 +91,112 @@ class Eval_Protein_dataset(Dataset):
                 self.ids.append(id)
 
         return features, labels
+    
+
+class Eval_Inhibitor_dataset(Dataset):
+
+    def __init__(self, root_dir,  min_prot_len, max_prot_len):
+        """
+        Parameters
+
+            root_dir (string): Directory containing dir for model 2 train dataset
+
+            min_prot_len (int): minimum length of proteins to filter through
+
+            max_prot_len (int): maximum length of proteins to filter through
+
+        """
+
+        #add protein ids for tracking
+        self.ids = []
+
+        self.root_dir = root_dir
+        self.min_prot_len = min_prot_len
+        self.max_prot_len = max_prot_len
+        features, labels = self.aggregate_data()
+        inps, outs = self.upsample(features, labels)
+
+        #shape = (batch_size, sequence max length, number of amino acids)
+        self.X, self.Y, self.encode_cats, self.decode_cats = self.onehot_encode(inps, outs)
+
+    def __len__(self):
+        return len(self.X)
+    
+    def __getitem__(self, idx):
+        x = self.X[idx]
+        y = self.Y[idx]
+        ids = self.ids[idx]
+
+        return {"X":x,"Y":y,"IDS":ids}
+
+    def pad_label(self, sequence, maxlen):
+        for _ in range(maxlen - len(sequence)):
+            t = [0] * len(sequence[0])
+            t[-1] = 1
+            sequence.append(t)
+
+        return sequence
+
+    def onehot_encode(self, features, labels):
+        categories = fold.get_vocab_encodings()
+        cat_dict = {categories[i] : i for i in range(len(categories))}
+        decode_dict = {cat_dict[key] : key for key in cat_dict.keys()}
+        encoded_data = []
+        encoded_inputs = []
+
+        for example in labels:
+            datapoint = []
+
+            for value in example:
+                if value != "X":
+                    encoded_val = [0] * int(len(cat_dict.keys()))
+                    encoded_val[cat_dict.get(value)] = 1
+
+                    datapoint.append(encoded_val)
+
+            datapoint = self.pad_label(datapoint, self.max_prot_len)
+            encoded_data.append(datapoint)
+
+        for example in features:
+            datapoint = []
+
+            for value in example:
+                encoded_val = [0] * int(len(cat_dict.keys()))
+                encoded_val[cat_dict.get(value)] = 1
+
+                datapoint.append(encoded_val)
+
+            datapoint = self.pad_label(datapoint, self.max_prot_len)
+            encoded_inputs.append(datapoint)
+
+        return torch.tensor(encoded_inputs), torch.tensor(encoded_data), cat_dict, decode_dict
+
+    def aggregate_data(self):
+
+        features = []
+        labels = []
+
+        for fname in os.walk(os.path.join(self.root_dir, "test_inhibitors")):
+
+            sequence = struct.get_sequence(os.path.join(self.root_dir, "test_inhibitors", fname))
+
+            if len(sequence) >= self.max_prot_len and len(sequence) <= self.min_prot_len:
+                labels.append(sequence)
+
+        for fname in os.walk(os.path.join(self.root_dir, "test_targets")):
+
+            sequence = struct.get_sequence(os.path.join(self.root_dir, "test_targets", fname))
+
+            if len(sequence) >= self.max_prot_len and len(sequence) <= self.min_prot_len:
+                features.append(sequence)
+
+        return features, labels
+        
+    
+    def upsample(self, X, Y):
+
+        for i in range(50):
+            X.append(X[i])
+            Y.append(Y[i])
+
+        return X, Y

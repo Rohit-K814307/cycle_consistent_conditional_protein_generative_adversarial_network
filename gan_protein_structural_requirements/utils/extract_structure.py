@@ -1,6 +1,7 @@
 import os
 
 from Bio.PDB import PDBParser
+from Bio import PDB
 from Bio.PDB.DSSP import DSSP
 from .polarity_list import polarity_list
 
@@ -290,6 +291,21 @@ def convert_pol_string(pol):
 
     return percent_polarity
 
+def get_sequence(fpath):
+    
+    parser = PDB.PDBParser()
+    structure = parser.get_structure('structure', fpath)
+    model = structure[0]
+    chains = model.get_chains()
+    sequence = ''
+
+    for chain in chains:
+        residues = chain.get_residues() 
+        for residue in residues:
+            if PDB.is_aa(residue): 
+                sequence += PDB.Polypeptide.three_to_one(residue.get_resname())
+
+    return sequence
 
 
 #############test examples########################

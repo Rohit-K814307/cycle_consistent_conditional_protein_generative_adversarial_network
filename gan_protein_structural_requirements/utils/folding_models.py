@@ -65,7 +65,7 @@ def get_vocab_encodings():
     arr = []
 
     with open(path,'r') as file:
-        for _ in range(21):
+        for _ in range(20):
             line = file.readline().strip()
             arr.append(line[0])
 
