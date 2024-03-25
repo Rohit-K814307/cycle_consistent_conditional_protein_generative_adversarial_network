@@ -6,3 +6,4 @@ gan_protein_structural_requirements/utils/esmfoldv1/
 checkpoints
 gan_protein_structural_requirements/results
 plots_and_results.ipynb
+pymol_ramachandran
