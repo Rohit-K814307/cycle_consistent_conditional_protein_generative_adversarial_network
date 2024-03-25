@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-setup(name='gan_protein_structural_requirements',
+setup(name='cycle_consistent_conditional_protein_generative_adversarial_network',
       version='1.0.0',
       description='Core code for Adversarially-Driven Generation of De Novo Proteins for Therapeutic Drug Design.',
       license="MIT",
