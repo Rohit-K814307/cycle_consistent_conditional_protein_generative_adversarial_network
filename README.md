@@ -25,6 +25,11 @@
 </div>
 
 
+## UPDATES
+
+- This Repository Contains OUTDATED V1 code for the original experiments conducted in the 2023-2024 year
+- This code does NOT contain Large Language Model-based protein generation processes
+
 
 <!-- TABLE OF CONTENTS -->
 <details>
